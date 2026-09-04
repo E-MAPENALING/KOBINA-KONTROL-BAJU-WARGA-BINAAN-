@@ -380,6 +380,10 @@ export const InmateModal: React.FC<InmateModalProps> = ({
                 <option value="Kamar 04" />
                 <option value="Kamar 05" />
                 <option value="Kamar 06" />
+                <option value="Kamar 07" />
+                <option value="Kamar 08" />
+                <option value="Kamar 09" />
+                <option value="Kamar 10" />
                 <option value="Kamar Khusus 01" />
                 <option value="Kamar Isolasi 01" />
               </datalist>

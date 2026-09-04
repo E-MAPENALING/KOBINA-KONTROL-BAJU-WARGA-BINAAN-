@@ -56,6 +56,17 @@ export interface BlokHunian {
   deskripsi?: string;
 }
 
+export interface KamarDetail {
+  id: string;
+  blokNama: string;
+  nomorKamar: string;
+  namaLengkap: string;
+  kapasitas: number;
+  kategori?: string;
+  keterangan?: string;
+  pjKamar?: string;
+}
+
 export interface Inmate {
   id: string;
   noRegister: string;

@@ -17,9 +17,7 @@ export const TukarPakaianModal: React.FC<TukarPakaianModalProps> = ({
   onSaveTukar,
   onExecuteExchange,
 }) => {
-  if (!isOpen || !inmate) return null;
-
-  const pakaianList = inmate.pakaianList || [];
+  const pakaianList = inmate?.pakaianList || [];
 
   // Default selected item: choose the first item that is at or exceeding max quota, or first item
   const itemAtMax = pakaianList.find((p) => p.jumlah >= p.maxJumlah);
@@ -32,6 +30,21 @@ export const TukarPakaianModal: React.FC<TukarPakaianModalProps> = ({
   const [itemPengganti, setItemPengganti] = useState<string>('Baju Seragam Baru (Size L)');
   const [petugas, setPetugas] = useState<string>('Petugas Regbimpas / Kamtib');
   const [catatan, setCatatan] = useState<string>('Pakaian lama ditarik ke gudang limbah/laundry. Diberikan seragam pengganti baru 1:1');
+
+  React.useEffect(() => {
+    if (inmate) {
+      const pList = inmate.pakaianList || [];
+      const itemMax = pList.find((p) => p.jumlah >= p.maxJumlah);
+      setSelectedItemName(itemMax ? itemMax.namaItem : pList[0]?.namaItem || 'Baju Seragam');
+      setJumlahTukar(1);
+      setKondisiLama('Rusak / Sobek');
+      setAlasan('Seragam sobek dan usang karena pemakaian kerja bakti');
+      setItemPengganti('Baju Seragam Baru (Size L)');
+      setCatatan('Pakaian lama ditarik ke gudang limbah/laundry. Diberikan seragam pengganti baru 1:1');
+    }
+  }, [inmate]);
+
+  if (!isOpen || !inmate) return null;
 
   // Find details of current selected item
   const currentItem = pakaianList.find((p) => p.namaItem === selectedItemName);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord } from './types';
+import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord, KamarDetail } from './types';
 import { INITIAL_INMATES, DEFAULT_BLOK_LIST, DAFTAR_KAMAR, DAFTAR_JENIS_KEJAHATAN } from './data/initialInmates';
 import { Header } from './components/Header';
 import { BlokSidebar } from './components/BlokSidebar';
@@ -16,16 +16,21 @@ import { KelolaBlokModal } from './components/KelolaBlokModal';
 import { TukarPakaianModal } from './components/TukarPakaianModal';
 import { DataSyncBar } from './components/DataSyncBar';
 import { DataSyncModal } from './components/DataSyncModal';
+import { DetailKamarBlokModal } from './components/DetailKamarBlokModal';
+import { DeleteInmateModal } from './components/DeleteInmateModal';
 import {
   getSpecificRoomsForBlok,
   getAllRoomsGroupedByBlok,
   getAllSpecificRoomsFlat,
   normalizeInmateWithBlok,
+  generateDefaultKamarDetails,
 } from './utils/kamarHelper';
-import { LayoutGrid, Table, Info, RefreshCw, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, Table, Info, RefreshCw, ShieldCheck, DoorOpen } from 'lucide-react';
 
-const STORAGE_KEY = 'lapas_kontrol_baju_data_v4_brebes';
-const BLOK_STORAGE_KEY = 'lapas_daftar_blok_v4_brebes';
+const STORAGE_KEY = 'lapas_batang_kontrol_baju_v2';
+const BLOK_STORAGE_KEY = 'lapas_batang_daftar_blok_v2';
+const KAMAR_STORAGE_KEY = 'lapas_batang_kamar_details_v2';
+const LAST_SYNC_KEY = 'lapas_batang_last_sync_v2';
 
 export default function App() {
   // 1. Blok Hunian State with LocalStorage Persistence
@@ -34,7 +39,7 @@ export default function App() {
       const saved = localStorage.getItem(BLOK_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed) && parsed.length === DEFAULT_BLOK_LIST.length) {
           return parsed;
         }
       }
@@ -55,13 +60,37 @@ export default function App() {
   // Active Selected Blok (for Sidebar navigation)
   const [selectedBlok, setSelectedBlok] = useState<string>('Semua Blok');
 
-  // 2. Inmates State with LocalStorage Persistence (Loads full 444 Lapas Brebes inmates)
+  // Kamar Details State (Capacity, Category, Description, Room Leader/PJ per Room)
+  const [kamarDetails, setKamarDetails] = useState<KamarDetail[]>(() => {
+    try {
+      const saved = localStorage.getItem(KAMAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.error('Error loading kamarDetails:', err);
+    }
+    return generateDefaultKamarDetails(DEFAULT_BLOK_LIST, INITIAL_INMATES);
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(KAMAR_STORAGE_KEY, JSON.stringify(kamarDetails));
+    } catch (err) {
+      console.error('Error saving kamarDetails to localStorage:', err);
+    }
+  }, [kamarDetails]);
+
+  // 2. Inmates State with LocalStorage Persistence (Synchronized with 439 Lapas Batang inmates)
   const [inmates, setInmates] = useState<Inmate[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 100) {
+        if (Array.isArray(parsed) && parsed.length >= 400) {
           return parsed.map((rawItem: any) => {
             const item = normalizeInmateWithBlok(rawItem, DEFAULT_BLOK_LIST);
             // Ensure pakaianList exists
@@ -105,6 +134,7 @@ export default function App() {
             return {
               ...item,
               pakaianList,
+              riwayatKontrol: item.riwayatKontrol || [],
               riwayatPenukaran: item.riwayatPenukaran || [],
               jumlahBaju: item.jumlahBaju ?? item.jumlahBajuMilik ?? 2,
               maxBaju: item.maxBaju ?? item.jatahStandar ?? 2,
@@ -120,10 +150,18 @@ export default function App() {
     return INITIAL_INMATES;
   });
 
-  // Save changes to localStorage
+  // Data Sync Timestamp State
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
+    return localStorage.getItem(LAST_SYNC_KEY) || (new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB');
+  });
+
+  // Save changes to localStorage in real-time on EVERY inmate mutation
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(inmates));
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+      setLastSyncTime(nowStr);
+      localStorage.setItem(LAST_SYNC_KEY, nowStr);
     } catch (err) {
       console.error('Error saving inmates to localStorage:', err);
     }
@@ -143,19 +181,19 @@ export default function App() {
     hanyaBajuBermasalah: false,
   });
 
-  // Generate all rooms grouped by current blocks
+  // Generate all rooms grouped by current blocks (strictly synchronized with kamarDetails)
   const roomGroups = useMemo(() => {
-    return getAllRoomsGroupedByBlok(daftarBlok, inmates);
-  }, [daftarBlok, inmates]);
+    return getAllRoomsGroupedByBlok(daftarBlok, inmates, kamarDetails);
+  }, [daftarBlok, inmates, kamarDetails]);
 
-  // Dynamic Room List strictly matching the current block list
+  // Dynamic Room List strictly matching the current block list and kamarDetails
   const dynamicDaftarKamar = useMemo(() => {
     if (selectedBlok !== 'Semua Blok') {
-      const specificRooms = getSpecificRoomsForBlok(selectedBlok, inmates);
+      const specificRooms = getSpecificRoomsForBlok(selectedBlok, inmates, kamarDetails);
       return ['Semua Kamar', ...specificRooms];
     }
-    return ['Semua Kamar', ...getAllSpecificRoomsFlat(daftarBlok, inmates)];
-  }, [inmates, daftarBlok, selectedBlok]);
+    return ['Semua Kamar', ...getAllSpecificRoomsFlat(daftarBlok, inmates, kamarDetails)];
+  }, [inmates, daftarBlok, selectedBlok, kamarDetails]);
 
   const handleSelectBlok = (blok: string) => {
     setSelectedBlok(blok);
@@ -278,6 +316,24 @@ export default function App() {
   const [printTargetKamar, setPrintTargetKamar] = useState<string | undefined>(undefined);
   const [isKelolaBlokOpen, setIsKelolaBlokOpen] = useState(false);
 
+  // Detail Kamar per Blok Modal State
+  const [isDetailKamarOpen, setIsDetailKamarOpen] = useState(false);
+  const [detailKamarBlok, setDetailKamarBlok] = useState<string>('BLOK B');
+
+  const handleOpenDetailKamar = (blokNama?: string) => {
+    if (blokNama && blokNama !== 'Semua Blok') {
+      setDetailKamarBlok(blokNama);
+    } else if (selectedBlok && selectedBlok !== 'Semua Blok') {
+      setDetailKamarBlok(selectedBlok);
+    } else {
+      setDetailKamarBlok(daftarBlok[0]?.nama || 'BLOK B');
+    }
+    setIsDetailKamarOpen(true);
+  };
+
+  // Inmate Delete Confirmation Modal State (replaces window.confirm)
+  const [inmateToDelete, setInmateToDelete] = useState<Inmate | null>(null);
+
   const handleOpenPrintModal = (kamarName?: string) => {
     if (kamarName) {
       setPrintTargetKamar(kamarName);
@@ -293,12 +349,10 @@ export default function App() {
   const [isTukarPakaianOpen, setIsTukarPakaianOpen] = useState(false);
   const [inmateForTukar, setInmateForTukar] = useState<Inmate | null>(null);
 
-  // Data Sync Modal & Timestamp
+  // Data Sync Modal
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
-    return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-  });
 
+  // Total Sync (Reset back to pure 444 Master Inmates & 6 Blocks Lapas Batang)
   const handleSyncToDummy = () => {
     setInmates(INITIAL_INMATES);
     setDaftarBlok(DEFAULT_BLOK_LIST);
@@ -317,8 +371,67 @@ export default function App() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_INMATES));
       localStorage.setItem(BLOK_STORAGE_KEY, JSON.stringify(DEFAULT_BLOK_LIST));
+      localStorage.setItem(LAST_SYNC_KEY, nowStr);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Smart Sync (Preserves live inspection/swap records while synchronizing all 444 WBP & 6 Blocks Lapas Batang)
+  const handleSmartSync = () => {
+    const liveMap = new Map<string, Inmate>();
+    inmates.forEach((item) => {
+      if (item.id) liveMap.set(item.id, item);
+      if (item.noRegister) liveMap.set(item.noRegister, item);
+    });
+
+    const merged = INITIAL_INMATES.map((masterItem) => {
+      const live = liveMap.get(masterItem.id) || liveMap.get(masterItem.noRegister);
+      if (live) {
+        return {
+          ...masterItem,
+          ...live,
+          pakaianList: live.pakaianList && live.pakaianList.length > 0 ? live.pakaianList : masterItem.pakaianList,
+          riwayatKontrol: live.riwayatKontrol || [],
+          riwayatPenukaran: live.riwayatPenukaran || [],
+        };
+      }
+      return masterItem;
+    });
+
+    setInmates(merged);
+    setDaftarBlok(DEFAULT_BLOK_LIST);
+    const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    setLastSyncTime(nowStr);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      localStorage.setItem(BLOK_STORAGE_KEY, JSON.stringify(DEFAULT_BLOK_LIST));
+      localStorage.setItem(LAST_SYNC_KEY, nowStr);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Import JSON Backup Data Handler
+  const handleImportData = (importedInmates: Inmate[], importedBlok?: BlokHunian[]) => {
+    if (Array.isArray(importedInmates) && importedInmates.length > 0) {
+      const activeBloks = importedBlok && importedBlok.length > 0 ? importedBlok : daftarBlok;
+      const normalized = importedInmates.map((raw) => normalizeInmateWithBlok(raw, activeBloks));
+      setInmates(normalized);
+      if (importedBlok && importedBlok.length > 0) {
+        setDaftarBlok(importedBlok);
+      }
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      setLastSyncTime(nowStr);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        if (importedBlok) {
+          localStorage.setItem(BLOK_STORAGE_KEY, JSON.stringify(importedBlok));
+        }
+        localStorage.setItem(LAST_SYNC_KEY, nowStr);
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 
@@ -636,11 +749,20 @@ export default function App() {
     );
   };
 
-  // Delete inmate
+  // Delete inmate using custom in-app confirmation modal
   const handleDeleteInmate = (id: string, nama: string) => {
-    if (window.confirm(`Hapus data pakaian penghuni "${nama}" dari sistem kontrol?`)) {
+    const target = inmates.find((i) => i.id === id);
+    if (target) {
+      setInmateToDelete(target);
+    } else {
       setInmates((prev) => prev.filter((i) => i.id !== id));
     }
+  };
+
+  const handleConfirmDeleteInmate = () => {
+    if (!inmateToDelete) return;
+    setInmates((prev) => prev.filter((i) => i.id !== inmateToDelete.id));
+    setInmateToDelete(null);
   };
 
   // Open Tukar Pakaian modal for inmate
@@ -668,6 +790,7 @@ export default function App() {
         onOpenKamarInspect={() => setIsKamarInspectOpen(true)}
         onOpenPrintModal={() => handleOpenPrintModal()}
         onOpenKelolaBlok={() => setIsKelolaBlokOpen(true)}
+        onOpenDetailKamar={() => handleOpenDetailKamar()}
         onResetData={handleResetData}
       />
 
@@ -687,8 +810,10 @@ export default function App() {
           liveBlok={daftarBlok}
           dummyBlok={DEFAULT_BLOK_LIST}
           selectedBlok={selectedBlok}
+          lastSyncTime={lastSyncTime}
           onOpenSyncModal={() => setIsSyncModalOpen(true)}
           onQuickSyncToDummy={handleSyncToDummy}
+          onSmartSync={handleSmartSync}
         />
 
         {/* Two-column Container: Sidebar on Left, Content on Right */}
@@ -701,6 +826,7 @@ export default function App() {
             onSelectBlok={handleSelectBlok}
             inmates={inmates}
             onOpenKelolaBlok={() => setIsKelolaBlokOpen(true)}
+            onOpenDetailKamar={handleOpenDetailKamar}
             onEditBlok={handleEditBlok}
             onHapusBlok={handleHapusBlok}
           />
@@ -768,7 +894,7 @@ export default function App() {
 
             {/* Selected Block Banner Indicator */}
             {selectedBlok !== 'Semua Blok' && (
-              <div className="flex items-center justify-between bg-cyan-950/40 border border-cyan-500/40 rounded-xl px-4 py-2 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-gradient-to-r from-cyan-950/60 to-blue-950/60 border border-cyan-500/40 rounded-xl px-4 py-2.5 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                   <span className="text-slate-300">
@@ -778,12 +904,23 @@ export default function App() {
                     </strong>
                   </span>
                 </div>
-                <button
-                  onClick={() => setSelectedBlok('Semua Blok')}
-                  className="text-cyan-300 hover:text-white underline font-semibold transition"
-                >
-                  Tampilkan Semua Blok
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDetailKamar(selectedBlok)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 hover:text-white border border-amber-400/50 font-bold transition text-xs shadow-xs"
+                    title={`Lihat, Edit, dan Kelola Kamar ${selectedBlok}`}
+                  >
+                    <DoorOpen className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Detail & Edit Kamar {selectedBlok}</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedBlok('Semua Blok')}
+                    className="text-cyan-300 hover:text-white underline font-semibold transition"
+                  >
+                    Tampilkan Semua Blok
+                  </button>
+                </div>
               </div>
             )}
 
@@ -836,7 +973,7 @@ export default function App() {
       <footer className="no-print bg-[#05151f]/90 border-t border-[#144963] mt-auto py-5 text-center text-xs text-slate-400 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>KOBINA (Kontrol Baju Warga Binaan) • Sistem Pengawasan Sandang & Inventarisasi Pakaian</span>
-          <span className="text-cyan-400 font-mono text-[11px]">Subseksi Registrasi & Bimbingan Kemasyarakatan Lapas Brebes</span>
+          <span className="text-cyan-400 font-mono text-[11px]">Subseksi Registrasi & Bimbingan Kemasyarakatan Lapas Batang</span>
         </div>
       </footer>
 
@@ -861,6 +998,7 @@ export default function App() {
         onTambahBlok={handleTambahBlok}
         onEditBlok={handleEditBlok}
         onHapusBlok={handleHapusBlok}
+        onOpenDetailKamar={handleOpenDetailKamar}
       />
 
       <TukarPakaianModal
@@ -929,7 +1067,33 @@ export default function App() {
         liveBlok={daftarBlok}
         dummyBlok={DEFAULT_BLOK_LIST}
         onSyncToDummy={handleSyncToDummy}
+        onSmartSync={handleSmartSync}
+        onImportData={handleImportData}
         lastSyncTime={lastSyncTime}
+      />
+
+      {/* Detail & Edit Kamar Hunian per Blok Modal */}
+      <DetailKamarBlokModal
+        isOpen={isDetailKamarOpen}
+        onClose={() => setIsDetailKamarOpen(false)}
+        daftarBlok={daftarBlok}
+        initialBlok={detailKamarBlok}
+        inmates={inmates}
+        kamarDetails={kamarDetails}
+        onUpdateKamarDetails={(updated) => setKamarDetails(updated)}
+        onUpdateInmates={(updated) => setInmates(updated)}
+        onOpenSidakKamar={() => {
+          setIsDetailKamarOpen(false);
+          setIsKamarInspectOpen(true);
+        }}
+      />
+
+      {/* In-App Confirmation Modal for Inmate Deletion */}
+      <DeleteInmateModal
+        isOpen={Boolean(inmateToDelete)}
+        inmate={inmateToDelete}
+        onClose={() => setInmateToDelete(null)}
+        onConfirm={handleConfirmDeleteInmate}
       />
 
     </div>

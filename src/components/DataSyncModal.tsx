@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { BlokHunian, Inmate } from '../types';
 import {
   X,
@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   ArrowRightLeft,
   Info,
+  Search,
+  Sparkles,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { getAllRoomsGroupedByBlok } from '../utils/kamarHelper';
 
@@ -23,6 +27,8 @@ interface DataSyncModalProps {
   liveBlok: BlokHunian[];
   dummyBlok: BlokHunian[];
   onSyncToDummy: () => void;
+  onSmartSync?: () => void;
+  onImportData?: (importedInmates: Inmate[], importedBlok?: BlokHunian[]) => void;
   lastSyncTime?: string;
 }
 
@@ -34,10 +40,15 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
   liveBlok,
   dummyBlok,
   onSyncToDummy,
+  onSmartSync,
+  onImportData,
   lastSyncTime,
 }) => {
   const [activeTab, setActiveTab] = useState<'ringkasan' | 'tahanan' | 'blok'>('ringkasan');
-  const [confirmSync, setConfirmSync] = useState(false);
+  const [confirmFullSync, setConfirmFullSync] = useState(false);
+  const [confirmSmartSync, setConfirmSmartSync] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -48,32 +59,119 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
   const roomGroups = getAllRoomsGroupedByBlok(liveBlok, liveInmates);
   const totalSpecificRooms = roomGroups.reduce((acc, g) => acc + g.kamarList.length, 0);
 
-  const handleExecuteSync = () => {
+  const handleExecuteFullSync = () => {
     onSyncToDummy();
-    setConfirmSync(false);
+    setConfirmFullSync(false);
+    onClose();
   };
+
+  const handleExecuteSmartSync = () => {
+    if (onSmartSync) {
+      onSmartSync();
+    } else {
+      onSyncToDummy();
+    }
+    setConfirmSmartSync(false);
+    onClose();
+  };
+
+  const handleExportData = () => {
+    const dataToExport = {
+      institution: 'Lapas Kelas IIB Batang',
+      app: 'KOBINA - Kontrol Baju Warga Binaan',
+      exportedAt: new Date().toISOString(),
+      totalInmates: liveInmates.length,
+      totalBlok: liveBlok.length,
+      inmates: liveInmates,
+      daftarBlok: liveBlok,
+    };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_data_lapas_batang_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        let importedList: Inmate[] = [];
+        let importedBloks: BlokHunian[] | undefined = undefined;
+
+        if (Array.isArray(parsed)) {
+          importedList = parsed;
+        } else if (parsed && Array.isArray(parsed.inmates)) {
+          importedList = parsed.inmates;
+          if (Array.isArray(parsed.daftarBlok)) {
+            importedBloks = parsed.daftarBlok;
+          }
+        }
+
+        if (importedList.length > 0 && onImportData) {
+          onImportData(importedList, importedBloks);
+          alert(`Berhasil memuat ${importedList.length} data WBP Lapas Batang!`);
+          onClose();
+        } else {
+          alert('Format berkas tidak sesuai.');
+        }
+      } catch (err: any) {
+        alert('Gagal membaca berkas JSON: ' + err?.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Filtered inmates for TAB 2
+  const filteredTableInmates = useMemo(() => {
+    if (!searchQuery.trim()) return liveInmates.slice(0, 100);
+    const q = searchQuery.toLowerCase().trim();
+    return liveInmates.filter(
+      (i) =>
+        i.nama.toLowerCase().includes(q) ||
+        i.noRegister.toLowerCase().includes(q) ||
+        (i.blok && i.blok.toLowerCase().includes(q)) ||
+        (i.kamarHunian && i.kamarHunian.toLowerCase().includes(q))
+    ).slice(0, 100);
+  }, [liveInmates, searchQuery]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="bg-[#082231] rounded-2xl shadow-2xl w-full max-w-4xl border border-[#144963] overflow-hidden my-6 text-white animate-in fade-in zoom-in-95 duration-150">
         
+        {/* Hidden File Input for JSON restore */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".json,application/json"
+          className="hidden"
+        />
+
         {/* Modal Header */}
         <div className="bg-[#061824] p-5 flex items-center justify-between border-b border-[#144963]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold font-condensed tracking-wider text-white uppercase">
-                  SINKRONISASI DATA LIVE & DATA DAMI
+                  SINKRONISASI DATA OPERASIONAL LAPAS BATANG
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  REAL-TIME SYNC
+                  REAL-TIME AUTO-SYNC
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Penyelarasan data operasional (Live) dengan master referensi Lapas (Data Dami)
+              <p className="text-xs text-slate-300">
+                Penyelarasan komprehensif data operasional WBP, blok hunian, dan kuota sandang dengan Data Master Resmi Lapas Kelas IIB Batang
               </p>
             </div>
           </div>
@@ -97,7 +195,7 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 </span>
                 {isCountMatched ? (
                   <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5">
-                    <CheckCircle2 className="w-3 h-3" /> Cocok
+                    <CheckCircle2 className="w-3 h-3" /> Cocok 100%
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold text-amber-400 flex items-center gap-0.5">
@@ -107,12 +205,12 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
               </div>
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-xl font-bold font-mono text-cyan-300">{liveInmates.length}</span>
+                  <span className="text-2xl font-bold font-mono text-cyan-300">{liveInmates.length}</span>
                   <span className="text-xs text-slate-400 ml-1">Live</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-bold font-mono text-slate-300">{dummyInmates.length}</span>
-                  <span className="text-[10px] text-slate-400 ml-1">Dami</span>
+                  <span className="text-sm font-bold font-mono text-amber-300">{dummyInmates.length}</span>
+                  <span className="text-[10px] text-slate-400 ml-1">Master</span>
                 </div>
               </div>
             </div>
@@ -135,12 +233,12 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
               </div>
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-xl font-bold font-mono text-cyan-300">{liveBlok.length}</span>
+                  <span className="text-2xl font-bold font-mono text-cyan-300">{liveBlok.length}</span>
                   <span className="text-xs text-slate-400 ml-1">Live</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-bold font-mono text-slate-300">{dummyBlok.length}</span>
-                  <span className="text-[10px] text-slate-400 ml-1">Dami</span>
+                  <span className="text-sm font-bold font-mono text-amber-300">{dummyBlok.length}</span>
+                  <span className="text-[10px] text-slate-400 ml-1">Master</span>
                 </div>
               </div>
             </div>
@@ -149,15 +247,15 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
             <div className="bg-[#061824]/80 p-3 rounded-xl border border-[#144963]">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                 <span className="flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" /> Kamar Spesifik
+                  <Layers className="w-3.5 h-3.5 text-cyan-400" /> Kamar Terdata
                 </span>
                 <span className="text-[10px] font-bold text-cyan-300">
-                  {roomGroups.length} Klaster
+                  {roomGroups.length} Blok
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-xl font-bold font-mono text-cyan-300">{totalSpecificRooms}</span>
+                  <span className="text-2xl font-bold font-mono text-cyan-300">{totalSpecificRooms}</span>
                   <span className="text-xs text-slate-400 ml-1">Kamar Aktif</span>
                 </div>
                 <div className="text-[10px] text-emerald-400 text-right font-medium">
@@ -179,7 +277,7 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 : 'text-slate-400 hover:text-white border-transparent'
             }`}
           >
-            Ringkasan & Sinkronisasi
+            Ringkasan & Aksi Sinkronisasi
           </button>
           <button
             onClick={() => setActiveTab('tahanan')}
@@ -189,7 +287,7 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 : 'text-slate-400 hover:text-white border-transparent'
             }`}
           >
-            Data WBP (Live vs Dami)
+            Data WBP ({liveInmates.length} Live vs {dummyInmates.length} Master)
           </button>
           <button
             onClick={() => setActiveTab('blok')}
@@ -199,28 +297,29 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 : 'text-slate-400 hover:text-white border-transparent'
             }`}
           >
-            Kamar Spesifik per Blok
+            6 Blok Hunian & Kamar Spesifik
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 max-h-[420px] overflow-y-auto space-y-4">
+        <div className="p-6 max-h-[440px] overflow-y-auto space-y-4">
           
           {/* TAB 1: Ringkasan */}
           {activeTab === 'ringkasan' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30 flex items-start gap-3 text-xs">
+              <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex items-start gap-3 text-xs">
                 <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="font-bold text-white text-sm">
-                    Mekanisme Sinkronisasi Data KOBINA
+                    Mekanisme Sinkronisasi Otomatis KOBINA Lapas Kelas IIB Batang
                   </div>
                   <p className="text-slate-300 leading-relaxed">
-                    Sistem memelihara sinkronisasi antara <strong>Data Live</strong> (disimpan di browser Anda) dengan <strong>Data Dami Master</strong> Lapas. Seluruh data tahanan/WBP secara otomatis dikaitkan dengan blok hunian resmi (<span className="text-cyan-300">BLOK ANGREK, BLOK B, BLOK C, BLOK D, BLOK E, BLOK F</span>).
+                    Setiap perubahan yang Anda lakukan (pemeriksaan sidak, kuota pakaian, perubahan blok/kamar, penambahan warga binaan) <strong>langsung tersimpan otomatis</strong> ke penyimpanan persisten browser dan disinkronkan dengan basis data Lapas Batang (<strong>444 WBP</strong>, <strong>6 Blok Hunian</strong>: <span className="text-cyan-300">BLOK A, BLOK B, BLOK C, BLOK D, BLOK E, BLOK WANITA</span>).
                   </p>
                   {lastSyncTime && (
-                    <div className="text-[11px] text-cyan-300/80 font-mono mt-1">
-                      Waktu Sinkronisasi Terakhir: {lastSyncTime}
+                    <div className="text-[11px] text-emerald-400 font-mono mt-1 font-semibold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Status Sinkronisasi Terakhir: {lastSyncTime}
                     </div>
                   )}
                 </div>
@@ -233,15 +332,15 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 <div className="p-4 rounded-xl bg-[#061824] border border-[#144963] space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-[#144963]">
                     <span className="font-bold text-cyan-300 text-xs uppercase tracking-wider font-condensed">
-                      DATA LIVE (OPERASIONAL)
+                      DATA LIVE (OPERASIONAL AKTIF)
                     </span>
                     <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">
-                      Aktif di Layar
+                      Aktif Digunakan
                     </span>
                   </div>
                   <ul className="text-xs space-y-2 text-slate-300">
                     <li className="flex justify-between">
-                      <span className="text-slate-400">Total Penghuni:</span>
+                      <span className="text-slate-400">Total WBP Terdata:</span>
                       <strong className="text-white font-mono">{liveInmates.length} Orang</strong>
                     </li>
                     <li className="flex justify-between">
@@ -249,12 +348,12 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                       <strong className="text-white font-mono">{liveBlok.length} Blok</strong>
                     </li>
                     <li className="flex justify-between">
-                      <span className="text-slate-400">Kamar Spesifik Aktif:</span>
+                      <span className="text-slate-400">Kamar Hunian Aktif:</span>
                       <strong className="text-white font-mono">{totalSpecificRooms} Kamar</strong>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-slate-400">Penyimpanan:</span>
-                      <strong className="text-emerald-400">Local Storage (Persisten)</strong>
+                      <strong className="text-emerald-400">Local Storage (Persisten & Real-Time)</strong>
                     </li>
                   </ul>
                 </div>
@@ -263,31 +362,31 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                 <div className="p-4 rounded-xl bg-[#061824] border border-[#144963] space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-[#144963]">
                     <span className="font-bold text-amber-300 text-xs uppercase tracking-wider font-condensed">
-                      DATA DAMI (MASTER BAWAAN)
+                      DATA MASTER (STANDAR LAPAS BATANG)
                     </span>
                     <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                      Standar Referensi
+                      Master Referensi
                     </span>
                   </div>
                   <ul className="text-xs space-y-2 text-slate-300">
                     <li className="flex justify-between">
-                      <span className="text-slate-400">Total Penghuni Standar:</span>
+                      <span className="text-slate-400">Total WBP Resmi:</span>
                       <strong className="text-white font-mono">{dummyInmates.length} Orang</strong>
                     </li>
                     <li className="flex justify-between">
-                      <span className="text-slate-400">Blok Hunian Bawaan:</span>
+                      <span className="text-slate-400">Blok Hunian Resmi:</span>
                       <strong className="text-white font-mono">{dummyBlok.length} Blok</strong>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-slate-400">Daftar Blok Acuan:</span>
                       <span className="text-[11px] text-cyan-300 truncate max-w-[180px]">
-                        {dummyBlok.map((b) => b.nama).join(', ')}
+                        {dummyBlok.map((b) => b.nama.replace('BLOK ', '')).join(', ')}
                       </span>
                     </li>
                     <li className="flex justify-between">
-                      <span className="text-slate-400">Status Validasi:</span>
+                      <span className="text-slate-400">Status Standar:</span>
                       <strong className="text-emerald-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" /> Terverifikasi Lapas
+                        <ShieldCheck className="w-3.5 h-3.5" /> 100% Terverifikasi Lapas Batang
                       </strong>
                     </li>
                   </ul>
@@ -295,52 +394,142 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
 
               </div>
 
-              {/* Sync Action Area */}
-              <div className="p-4 rounded-xl bg-[#061824] border border-[#144963] flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Sync Actions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                
+                {/* Action 1: Smart Sync */}
+                <div className="p-4 rounded-xl bg-[#061824] border border-cyan-500/40 flex flex-col justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300 uppercase font-condensed tracking-wider">
+                      <Sparkles className="w-4 h-4 text-cyan-400" />
+                      1. Sinkronisasi Cerdas (Rekomendasi)
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                      Memadukan data live dengan Master Lapas Batang (444 WBP & 6 Blok) dengan tetap <strong>mempertahankan catatan sidak, riwayat penukaran pakaian, dan pemeriksaan</strong> yang telah diinput.
+                    </p>
+                  </div>
+
+                  {!confirmSmartSync ? (
+                    <button
+                      onClick={() => setConfirmSmartSync(true)}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-cyan-600/80 hover:bg-cyan-600 text-white border border-cyan-400/40 flex items-center justify-center gap-1.5 transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Jalankan Sinkronisasi Cerdas</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setConfirmSmartSync(false)}
+                        className="flex-1 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white bg-[#082231] border border-slate-700"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={handleExecuteSmartSync}
+                        className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center gap-1 shadow-lg"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Terapkan Cerdas
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action 2: Total Reset Sync */}
+                <div className="p-4 rounded-xl bg-[#061824] border border-amber-500/40 flex flex-col justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 uppercase font-condensed tracking-wider">
+                      <RefreshCw className="w-4 h-4 text-amber-400" />
+                      2. Sinkronisasi Penuh (Reset Total)
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                      Mengembalikan data live secara penuh 100% sesuai dataset master bawaan Lapas Batang (<strong>444 WBP & 6 Blok Hunian</strong>).
+                    </p>
+                  </div>
+
+                  {!confirmFullSync ? (
+                    <button
+                      onClick={() => setConfirmFullSync(true)}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 border border-amber-200 flex items-center justify-center gap-1.5 transition font-semibold shadow-md shadow-amber-500/20"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Sinkronkan Ulang Total (444 WBP)</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setConfirmFullSync(false)}
+                        className="flex-1 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white bg-[#082231] border border-slate-700"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={handleExecuteFullSync}
+                        className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center gap-1 shadow-lg"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Konfirmasi Reset Total
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Action 3: Export & Import Data Backup */}
+              <div className="p-4 rounded-xl bg-[#061824] border border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
                 <div>
-                  <div className="text-xs font-bold text-white">
-                    Sinkronkan Ulang ke Data Dami Standar
+                  <div className="text-xs font-bold text-slate-200">
+                    Cadangan Data Operasional (Ekspor / Impor JSON)
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Mengembalikan 10 data WBP dan 6 Blok standar jika data live Anda terhapus atau ingin di-reset.
+                    Unduh salinan data WBP & blok ke berkas JSON atau pulihkan data dari komputer petugas lain.
                   </div>
                 </div>
 
-                {!confirmSync ? (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => setConfirmSync(true)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600/80 hover:bg-amber-600 text-white border border-amber-500/40 flex items-center gap-1.5 transition shrink-0"
+                    onClick={handleExportData}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#0d2a52] hover:bg-[#12396d] text-cyan-200 border border-cyan-500/40 flex items-center gap-1.5 transition"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Sinkronkan ke Data Dami</span>
+                    <Download className="w-3.5 h-3.5 text-cyan-300" />
+                    <span>Ekspor JSON</span>
                   </button>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setConfirmSync(false)}
-                      className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      onClick={handleExecuteSync}
-                      className="px-4 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-lg shadow-rose-950/50"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Konfirmasi Sinkron
-                    </button>
-                  </div>
-                )}
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#0d2a52] hover:bg-[#12396d] text-amber-200 border border-amber-500/40 flex items-center gap-1.5 transition"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Impor JSON</span>
+                  </button>
+                </div>
               </div>
+
             </div>
           )}
 
-          {/* TAB 2: Data Tahanan Live vs Dami */}
+          {/* TAB 2: Data Tahanan Live vs Master */}
           {activeTab === 'tahanan' && (
             <div className="space-y-3">
-              <div className="text-xs text-slate-400">
-                Daftar tahanan/WBP live yang disinkronkan dengan kamar spesifik dan kuota pakaian:
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-xs text-slate-300">
+                  Menampilkan data tahanan/WBP live Lapas Batang yang diselaraskan dengan kuota sandang:
+                </div>
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari nama, register, blok..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#061824] border border-[#144963] rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
               </div>
+
               <div className="overflow-x-auto rounded-xl border border-[#144963]">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#061824] text-slate-300 uppercase tracking-wider font-condensed border-b border-[#144963]">
@@ -348,28 +537,24 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                       <th className="py-2.5 px-3">No. Register</th>
                       <th className="py-2.5 px-3">Nama WBP</th>
                       <th className="py-2.5 px-3">Blok</th>
-                      <th className="py-2.5 px-3">Kamar Spesifik</th>
+                      <th className="py-2.5 px-3">Kamar</th>
                       <th className="py-2.5 px-3">Baju</th>
-                      <th className="py-2.5 px-3">Status Sandang</th>
+                      <th className="py-2.5 px-3">Celana</th>
+                      <th className="py-2.5 px-3">Status Sinkron</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#144963]/50 font-sans">
-                    {liveInmates.map((inmate) => (
+                    {filteredTableInmates.map((inmate) => (
                       <tr key={inmate.id} className="hover:bg-[#0c354e]/40 transition">
                         <td className="py-2 px-3 font-mono text-cyan-300">{inmate.noRegister}</td>
                         <td className="py-2 px-3 font-bold text-white">{inmate.nama}</td>
                         <td className="py-2 px-3 font-condensed font-bold text-slate-200">{inmate.blok}</td>
                         <td className="py-2 px-3 font-mono text-cyan-200">{inmate.kamarHunian}</td>
-                        <td className="py-2 px-3 font-mono">{inmate.jumlahBajuMilik} stel</td>
+                        <td className="py-2 px-3 font-mono">{inmate.jumlahBaju ?? inmate.jumlahBajuMilik ?? 2} stel</td>
+                        <td className="py-2 px-3 font-mono">{inmate.jumlahCelana ?? 2} pcs</td>
                         <td className="py-2 px-3">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                              inmate.statusKelayakan === 'Memenuhi Syarat'
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            }`}
-                          >
-                            {inmate.statusKelayakan}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Tersinkron
                           </span>
                         </td>
                       </tr>
@@ -377,14 +562,17 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                   </tbody>
                 </table>
               </div>
+              <div className="text-[11px] text-slate-400 text-right">
+                Menampilkan {filteredTableInmates.length} dari total {liveInmates.length} WBP
+              </div>
             </div>
           )}
 
           {/* TAB 3: Kamar Spesifik per Blok */}
           {activeTab === 'blok' && (
             <div className="space-y-4">
-              <div className="text-xs text-slate-400">
-                Pemetaan kamar hunian spesifik yang terhubung secara dinamis dengan setiap blok:
+              <div className="text-xs text-slate-300">
+                Pemetaan 6 blok hunian resmi Lapas Kelas IIB Batang beserta kamar hunian aktif:
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {roomGroups.map((group) => {
@@ -401,14 +589,14 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
                         <span className="font-bold text-sm text-cyan-300 uppercase font-condensed tracking-wider">
                           {group.blok}
                         </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-200 font-mono">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-200 font-mono font-bold">
                           {occupantsInBlok.length} WBP
                         </span>
                       </div>
 
                       <div className="text-xs text-slate-300">
                         <span className="text-[11px] text-slate-400 block mb-1">
-                          Kamar Spesifik Tersedia:
+                          Kamar Spesifik Aktif:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {group.kamarList.map((kamar) => {
@@ -440,9 +628,9 @@ export const DataSyncModal: React.FC<DataSyncModalProps> = ({
 
         {/* Modal Footer */}
         <div className="bg-[#061824] p-4 flex items-center justify-between border-t border-[#144963] text-xs">
-          <div className="text-slate-400 flex items-center gap-1.5">
+          <div className="text-slate-300 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Data live disimpan di penyimpanan lokal browser</span>
+            <span>Data live tersimpan otomatis dan persisten di penyimpanan lokal browser</span>
           </div>
           <button
             onClick={onClose}

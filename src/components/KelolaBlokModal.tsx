@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BlokHunian, Inmate } from '../types';
-import { X, Building2, Plus, Edit3, Trash2, Check, AlertTriangle, Users } from 'lucide-react';
+import { X, Building2, Plus, Edit3, Trash2, Check, AlertTriangle, Users, DoorOpen } from 'lucide-react';
 
 interface KelolaBlokModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface KelolaBlokModalProps {
   onEditBlok?: (id: string, namaBaru: string, deskripsiBaru?: string) => void;
   onDeleteBlok?: (id: string, namaBlok: string) => void;
   onHapusBlok?: (id: string, namaBlok: string) => void;
+  onOpenDetailKamar?: (blokNama: string) => void;
 }
 
 export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
@@ -26,6 +27,7 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
   onEditBlok,
   onDeleteBlok,
   onHapusBlok,
+  onOpenDetailKamar,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNama, setEditNama] = useState('');
@@ -35,6 +37,7 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
   const [tambahDeskripsi, setTambahDeskripsi] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [blokToDelete, setBlokToDelete] = useState<BlokHunian | null>(null);
 
   const effectiveBlokList = blokList || daftarBlok || [];
   const handleAdd = onAddBlok || onTambahBlok;
@@ -126,19 +129,35 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider font-condensed">
               Daftar Blok Hunian ({effectiveBlokList.length})
             </span>
-            {!isAdding && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdding(true);
-                  setErrorMessage('');
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white transition shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Tambah Blok Baru
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {onOpenDetailKamar && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenDetailKamar(effectiveBlokList[0]?.nama || 'BLOK B');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 hover:text-white border border-amber-400/50 transition shadow-xs"
+                  title="Buka panel untuk menambah, mengedit, dan menghapus kamar hunian"
+                >
+                  <DoorOpen className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Detail & Edit Kamar</span>
+                </button>
+              )}
+              {!isAdding && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdding(true);
+                    setErrorMessage('');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white transition shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Tambah Blok Baru
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Form Tambah Blok */}
@@ -275,6 +294,20 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
+                        {onOpenDetailKamar && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              onOpenDetailKamar(blok.nama);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-300 bg-amber-400/20 hover:bg-amber-400/35 rounded-xl border border-amber-400/60 transition shadow-xs"
+                            title={`Lihat, Tambah, Edit, dan Hapus Kamar untuk ${blok.nama}`}
+                          >
+                            <DoorOpen className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Detail & Edit Kamar</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => startEdit(blok)}
@@ -286,23 +319,7 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (countInmates > 0) {
-                              const confirmDel = window.confirm(
-                                `Perhatian: Blok "${blok.nama}" memiliki ${countInmates} tahanan/WBP terdaftar. Yakin ingin menghapus blok ini?`
-                              );
-                              if (confirmDel && handleDelete) {
-                                handleDelete(blok.id, blok.nama);
-                              }
-                            } else {
-                              const confirmDel = window.confirm(
-                                `Hapus blok "${blok.nama}" dari daftar?`
-                              );
-                              if (confirmDel && handleDelete) {
-                                handleDelete(blok.id, blok.nama);
-                              }
-                            }
-                          }}
+                          onClick={() => setBlokToDelete(blok)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-300 bg-rose-950/30 hover:bg-rose-950/60 rounded-lg border border-rose-500/40 transition shadow-xs"
                           title="Hapus Blok dari Sistem"
                         >
@@ -331,6 +348,71 @@ export const KelolaBlokModal: React.FC<KelolaBlokModalProps> = ({
         </div>
 
       </div>
+
+      {/* Confirmation Modal for Deleting Block (Replaces window.confirm) */}
+      {blokToDelete && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-[#0e273c] rounded-2xl shadow-2xl w-full max-w-md border border-rose-500/50 overflow-hidden">
+            <div className="bg-[#1c080d] px-4 py-3 border-b border-rose-900/80 flex items-center gap-2 text-rose-400">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h4 className="text-sm font-bold text-white font-condensed tracking-wide uppercase">
+                KONFIRMASI HAPUS BLOK: {blokToDelete.nama}
+              </h4>
+            </div>
+
+            <div className="p-4 space-y-3 text-xs">
+              {(() => {
+                const occupants = inmates.filter(
+                  (i) => i.blok.toLowerCase().trim() === blokToDelete.nama.toLowerCase().trim()
+                ).length;
+
+                if (occupants > 0) {
+                  return (
+                    <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-300">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        Perhatian: Blok ini memiliki {occupants} penghuni aktif!
+                      </div>
+                      <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                        Terdapat <strong>{occupants} orang WBP/Tahanan</strong> yang tercatat di blok ini. Jika dihapus, blok akan dihilangkan dari daftar navigasi.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <p className="text-slate-300 leading-relaxed">
+                    Blok ini tidak memiliki penghuni aktif. Apakah Anda yakin ingin menghapus <strong>{blokToDelete.nama}</strong> dari sistem?
+                  </p>
+                );
+              })()}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-900/60">
+                <button
+                  type="button"
+                  onClick={() => setBlokToDelete(null)}
+                  className="px-3.5 py-1.5 text-slate-400 hover:text-white"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (handleDelete && blokToDelete) {
+                      handleDelete(blokToDelete.id, blokToDelete.nama);
+                    }
+                    setBlokToDelete(null);
+                  }}
+                  className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950/50 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Ya, Hapus Blok</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

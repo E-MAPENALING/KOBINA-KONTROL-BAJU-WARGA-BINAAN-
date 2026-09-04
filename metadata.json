@@ -1,6 +1,6 @@
 {
-  "name": "KOBINA - Kontrol Baju Warga Binaan",
-  "description": "KOBINA (Kontrol Baju Warga Binaan) - Aplikasi pengawasan dan inventarisasi kontrol pakaian tahanan & narapidana per blok hunian Lapas/Rutan.",
+  "name": "KOBINA - Lapas Kelas IIB Batang",
+  "description": "KOBINA (Kontrol Baju Warga Binaan) - Sistem inventarisasi tertib sandang, sidak pakaian, dan penukaran baju tahanan & narapidana Lapas Kelas IIB Batang.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

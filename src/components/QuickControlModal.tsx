@@ -26,20 +26,30 @@ export const QuickControlModal: React.FC<QuickControlModalProps> = ({
   inmate,
   onSave,
 }) => {
-  if (!isOpen || !inmate) return null;
-
-  const currentBaju = inmate.jumlahBaju ?? inmate.jumlahBajuMilik ?? 2;
-  const maxBaju = inmate.maxBaju ?? inmate.jatahStandar ?? 2;
-  const currentCelana = inmate.jumlahCelana ?? 2;
-  const maxCelana = inmate.maxCelana ?? 2;
+  const currentBaju = inmate?.jumlahBaju ?? inmate?.jumlahBajuMilik ?? 2;
+  const maxBaju = inmate?.maxBaju ?? inmate?.jatahStandar ?? 2;
+  const currentCelana = inmate?.jumlahCelana ?? 2;
+  const maxCelana = inmate?.maxCelana ?? 2;
 
   const [kategoriAksi, setKategoriAksi] = useState<ActionCategory>('Pemeriksaan Rutin');
   const [jumlahSesudahnya, setJumlahSesudahnya] = useState<number>(currentBaju);
   const [jumlahCelanaSesudahnya, setJumlahCelanaSesudahnya] = useState<number>(currentCelana);
-  const [kondisi, setKondisi] = useState<ClothingCondition>(inmate.kondisiBaju);
-  const [bajuTerlarangDisita, setBajuTerlarangDisita] = useState<number>(inmate.bajuTerlarangDisita);
+  const [kondisi, setKondisi] = useState<ClothingCondition>(inmate?.kondisiBaju || 'Layak Pakai');
+  const [bajuTerlarangDisita, setBajuTerlarangDisita] = useState<number>(inmate?.bajuTerlarangDisita || 0);
   const [petugas, setPetugas] = useState<string>('Petugas Regbimpas / Kamtib');
   const [catatan, setCatatan] = useState<string>('');
+
+  React.useEffect(() => {
+    if (inmate) {
+      setJumlahSesudahnya(inmate.jumlahBaju ?? inmate.jumlahBajuMilik ?? 2);
+      setJumlahCelanaSesudahnya(inmate.jumlahCelana ?? 2);
+      setKondisi(inmate.kondisiBaju || 'Layak Pakai');
+      setBajuTerlarangDisita(inmate.bajuTerlarangDisita || 0);
+      setCatatan('');
+    }
+  }, [inmate]);
+
+  if (!isOpen || !inmate) return null;
 
   const isBajuOver = jumlahSesudahnya > maxBaju;
   const isCelanaOver = jumlahCelanaSesudahnya > maxCelana;

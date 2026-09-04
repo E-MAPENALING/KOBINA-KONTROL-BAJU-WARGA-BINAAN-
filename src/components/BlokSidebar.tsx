@@ -12,6 +12,7 @@ import {
   X,
   AlertTriangle,
   Users,
+  DoorOpen,
 } from 'lucide-react';
 
 interface BlokSidebarProps {
@@ -20,6 +21,7 @@ interface BlokSidebarProps {
   onSelectBlok: (blokName: string) => void;
   inmates: Inmate[];
   onOpenKelolaBlok: () => void;
+  onOpenDetailKamar?: (blokNama: string) => void;
   onEditBlok?: (id: string, namaBaru: string, deskripsiBaru?: string) => void;
   onHapusBlok?: (id: string, namaBlok: string) => void;
 }
@@ -30,6 +32,7 @@ export const BlokSidebar: React.FC<BlokSidebarProps> = ({
   onSelectBlok,
   inmates,
   onOpenKelolaBlok,
+  onOpenDetailKamar,
   onEditBlok,
   onHapusBlok,
 }) => {
@@ -178,13 +181,26 @@ export const BlokSidebar: React.FC<BlokSidebarProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onOpenKelolaBlok}
-          className="p-1.5 rounded-lg bg-[#0d2a52] hover:bg-[#12396d] text-amber-300 hover:text-white border border-blue-400/40 hover:border-amber-400 transition text-xs flex items-center gap-1 shadow-xs"
-          title="Kelola, Tambah, Edit, dan Hapus Blok"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {onOpenDetailKamar && (
+            <button
+              type="button"
+              onClick={() => onOpenDetailKamar(selectedBlok !== 'Semua Blok' ? selectedBlok : 'BLOK B')}
+              className="px-2 py-1.5 rounded-lg bg-[#0d2a52] hover:bg-[#12396d] text-amber-300 hover:text-white border border-amber-400/40 hover:border-amber-400 transition text-xs flex items-center gap-1 shadow-xs font-semibold"
+              title="Detail & Kelola Kamar Hunian per Blok"
+            >
+              <DoorOpen className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Kamar</span>
+            </button>
+          )}
+          <button
+            onClick={onOpenKelolaBlok}
+            className="p-1.5 rounded-lg bg-[#0d2a52] hover:bg-[#12396d] text-amber-300 hover:text-white border border-blue-400/40 hover:border-amber-400 transition text-xs flex items-center gap-1 shadow-xs"
+            title="Kelola, Tambah, Edit, dan Hapus Blok"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* All Blocks Item */}
@@ -258,6 +274,21 @@ export const BlokSidebar: React.FC<BlokSidebarProps> = ({
                   {/* Actions (Quick actions on hover + 3 dots menu) */}
                   <div className="flex items-center gap-0.5">
                     
+                    {/* Quick Detail Kamar Icon (visible on hover) */}
+                    {onOpenDetailKamar && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenDetailKamar(blok.nama);
+                        }}
+                        className="hidden sm:group-hover:inline-flex p-1 rounded-md text-amber-300/80 hover:text-amber-200 hover:bg-amber-400/20 transition"
+                        title={`Detail & Kelola Kamar ${blok.nama}`}
+                      >
+                        <DoorOpen className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
                     {/* Quick Edit Icon (visible on hover) */}
                     <button
                       type="button"
@@ -302,6 +333,21 @@ export const BlokSidebar: React.FC<BlokSidebarProps> = ({
                           <div className="px-3 py-1.5 border-b border-blue-900/80 font-semibold text-amber-300 text-[10px] uppercase tracking-wider font-condensed break-words">
                             Menu {blok.nama}
                           </div>
+
+                          {onOpenDetailKamar && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                                onOpenDetailKamar(blok.nama);
+                              }}
+                              className="w-full text-left px-3 py-2 flex items-center gap-2 text-amber-300 hover:text-white hover:bg-blue-900/40 transition font-medium"
+                            >
+                              <DoorOpen className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Detail Kamar</span>
+                            </button>
+                          )}
 
                           <button
                             type="button"

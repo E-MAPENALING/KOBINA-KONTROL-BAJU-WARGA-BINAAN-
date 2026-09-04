@@ -1,11 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2 } from 'lucide-react';
+import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2, DoorOpen } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
   onOpenKamarInspect: () => void;
   onOpenPrintModal: () => void;
   onOpenKelolaBlok: () => void;
+  onOpenDetailKamar?: () => void;
   onResetData: () => void;
   totalInmates: number;
 }
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenKamarInspect,
   onOpenPrintModal,
   onOpenKelolaBlok,
+  onOpenDetailKamar,
   onResetData,
   totalInmates,
 }) => {
@@ -50,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
               </p>
               <span className="hidden md:inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span className="hidden md:inline-block text-xs text-amber-200/90 font-medium tracking-wide">
-                Lapas Kelas IIB Brebes • {totalInmates} WBP Terdaftar
+                Lapas Kelas IIB Batang • {totalInmates} WBP Terdaftar
               </span>
             </div>
           </div>
@@ -58,6 +60,18 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Toolbar: White & Gold Accented Buttons */}
           <div className="flex flex-wrap items-center gap-2.5">
             
+            {onOpenDetailKamar && (
+              <button
+                id="btn-detail-kamar"
+                onClick={onOpenDetailKamar}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#0b274e] hover:bg-[#10376d] text-amber-300 hover:text-white border border-amber-500/40 hover:border-amber-400 transition shadow-sm"
+                title="Detail, Edit, dan Kelola Kamar Hunian per Blok"
+              >
+                <DoorOpen className="w-4 h-4 text-amber-400" />
+                <span>Detail Kamar</span>
+              </button>
+            )}
+
             <button
               id="btn-kelola-blok"
               onClick={onOpenKelolaBlok}

@@ -430,10 +430,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               DIREKTORAT JENDERAL PEMASYARAKATAN
             </div>
             <div className="text-lg font-black uppercase text-slate-950 mt-0.5 print:text-black tracking-wide">
-              LEMBAGA PEMASYARAKATAN KELAS IIB BREBES
+              LEMBAGA PEMASYARAKATAN KELAS IIB BATANG
             </div>
             <div className="text-[11px] text-slate-600 print:text-black">
-              Jalan Pemasyarakatan No. 01 • Telp: (0283) 671234 • Brebes, Jawa Tengah 52212
+              Jalan R.A. Kartini No. 49 • Telp: (0285) 391036 • Batang, Jawa Tengah 51215
             </div>
           </div>
 
@@ -687,7 +687,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
 
             <div>
-              <p>Brebes, {currentDate}</p>
+              <p>Batang, {currentDate}</p>
               <p className="font-bold">Kepala Subseksi Registrasi & Bimpas</p>
               <div className="h-16 print:h-14"></div>
               <p className="font-bold underline">SURYANTO, A.Md.P., S.H.</p>

@@ -1,28 +1,28 @@
 import { Inmate, BlokHunian } from '../types';
-import { LAPAS_BREBES_INMATES } from './lapasBrebesInmates';
+import { LAPAS_BATANG_INMATES } from './lapasBatangInmates';
 
 export const DEFAULT_BLOK_LIST: BlokHunian[] = [
-  { id: 'b-anggrek', nama: 'BLOK ANGGREK', deskripsi: 'Blok Hunian Anggrek (Blok A / Wanita)' },
-  { id: 'b-bougenville', nama: 'BLOK BOUGENVILLE', deskripsi: 'Blok Hunian Bougenville (Blok B)' },
-  { id: 'b-classic', nama: 'BLOK CLASSIC', deskripsi: 'Blok Hunian Classic (Blok C)' },
-  { id: 'b-dahlia', nama: 'BLOK DAHLIA', deskripsi: 'Blok Hunian Dahlia (Blok D)' },
-  { id: 'b-edelweis', nama: 'BLOK EDELWEIS', deskripsi: 'Blok Hunian Edelweis (Blok E)' },
-  { id: 'b-flamboyan', nama: 'BLOK FLAMBOYAN', deskripsi: 'Blok Hunian Flamboyan (Blok F / Isolasi)' },
+  { id: 'b-a', nama: 'BLOK A', deskripsi: 'Blok Hunian A (Wanita)' },
+  { id: 'b-b', nama: 'BLOK B', deskripsi: 'Blok Hunian B' },
+  { id: 'b-c', nama: 'BLOK C', deskripsi: 'Blok Hunian C' },
+  { id: 'b-d', nama: 'BLOK D', deskripsi: 'Blok Hunian D' },
+  { id: 'b-e', nama: 'BLOK E', deskripsi: 'Blok Hunian E' },
+  { id: 'b-f', nama: 'BLOK F', deskripsi: 'Blok Hunian F' },
 ];
 
 export const DAFTAR_BLOK = [
   'Semua Blok',
-  'BLOK ANGGREK',
-  'BLOK BOUGENVILLE',
-  'BLOK CLASSIC',
-  'BLOK DAHLIA',
-  'BLOK EDELWEIS',
-  'BLOK FLAMBOYAN',
+  'BLOK A',
+  'BLOK B',
+  'BLOK C',
+  'BLOK D',
+  'BLOK E',
+  'BLOK F',
 ];
 
 export const DAFTAR_KAMAR = [
   'Semua Kamar',
-  ...Array.from(new Set(LAPAS_BREBES_INMATES.map((i) => i.kamarHunian))).sort(),
+  ...Array.from(new Set(LAPAS_BATANG_INMATES.map((i) => i.kamarHunian))).sort(),
 ];
 
 export const DAFTAR_JENIS_KEJAHATAN = [
@@ -41,4 +41,4 @@ export const DAFTAR_JENIS_KEJAHATAN = [
   'Pencurian Biasa (Pasal 362 KUHP)',
 ];
 
-export const INITIAL_INMATES: Inmate[] = LAPAS_BREBES_INMATES;
+export const INITIAL_INMATES: Inmate[] = LAPAS_BATANG_INMATES;

@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Sparkles,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface InmateTableProps {
@@ -25,6 +26,7 @@ interface InmateTableProps {
   onOpenEdit: (inmate: Inmate) => void;
   onDelete: (id: string, nama: string) => void;
   onOpenTukarPakaian: (inmate: Inmate) => void;
+  onOpenMutasi?: (inmate: Inmate) => void;
   onQuickAdjustClothing: (inmateId: string, delta: number) => void;
   onQuickAdjustItem?: (inmateId: string, itemType: 'baju' | 'celana', delta: number) => void;
 }
@@ -36,6 +38,7 @@ export const InmateTable: React.FC<InmateTableProps> = ({
   onOpenEdit,
   onDelete,
   onOpenTukarPakaian,
+  onOpenMutasi,
   onQuickAdjustClothing,
   onQuickAdjustItem,
 }) => {
@@ -239,6 +242,17 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                       >
                         <RefreshCw className="w-4 h-4 text-cyan-400" />
                       </button>
+
+                      {/* Tombol Mutasi Kamar / Blok */}
+                      {onOpenMutasi && (
+                        <button
+                          onClick={() => onOpenMutasi(inmate)}
+                          className="p-1.5 rounded-xl text-blue-300 hover:text-white bg-[#061527] hover:bg-blue-600/30 border border-blue-500/40 hover:border-cyan-400 transition shadow-2xs"
+                          title="Mutasi Kamar / Blok Warga Binaan"
+                        >
+                          <ArrowRightLeft className="w-4 h-4 text-cyan-300" />
+                        </button>
+                      )}
 
                       {/* Tombol Detail / Cetak Kartu Kendali */}
                       <button

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2, DoorOpen } from 'lucide-react';
+import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2, DoorOpen, ArrowRightLeft } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
@@ -7,6 +7,7 @@ interface HeaderProps {
   onOpenPrintModal: () => void;
   onOpenKelolaBlok: () => void;
   onOpenDetailKamar?: () => void;
+  onOpenMutasi?: () => void;
   onResetData: () => void;
   totalInmates: number;
 }
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPrintModal,
   onOpenKelolaBlok,
   onOpenDetailKamar,
+  onOpenMutasi,
   onResetData,
   totalInmates,
 }) => {
@@ -81,6 +83,18 @@ export const Header: React.FC<HeaderProps> = ({
               <Building2 className="w-4 h-4 text-amber-300" />
               <span>Kelola Blok</span>
             </button>
+
+            {onOpenMutasi && (
+              <button
+                id="btn-mutasi-kamar"
+                onClick={onOpenMutasi}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#092242] hover:bg-[#0e315d] text-cyan-300 hover:text-white border border-cyan-500/50 hover:border-cyan-400 transition shadow-sm"
+                title="Mutasi & Pemindahan Kamar/Blok Warga Binaan"
+              >
+                <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+                <span>Mutasi Kamar</span>
+              </button>
+            )}
 
             <button
               id="btn-inspeksi-kamar"

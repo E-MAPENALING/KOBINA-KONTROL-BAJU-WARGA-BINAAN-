@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord, KamarDetail } from './types';
+import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord, KamarDetail, MutasiKamarRecord, KontrolRecord } from './types';
 import { INITIAL_INMATES, DEFAULT_BLOK_LIST, DAFTAR_KAMAR, DAFTAR_JENIS_KEJAHATAN } from './data/initialInmates';
 import { Header } from './components/Header';
 import { BlokSidebar } from './components/BlokSidebar';
@@ -18,6 +18,7 @@ import { DataSyncBar } from './components/DataSyncBar';
 import { DataSyncModal } from './components/DataSyncModal';
 import { DetailKamarBlokModal } from './components/DetailKamarBlokModal';
 import { DeleteInmateModal } from './components/DeleteInmateModal';
+import { MutasiKamarModal } from './components/MutasiKamarModal';
 import {
   getSpecificRoomsForBlok,
   getAllRoomsGroupedByBlok,
@@ -25,7 +26,7 @@ import {
   normalizeInmateWithBlok,
   generateDefaultKamarDetails,
 } from './utils/kamarHelper';
-import { LayoutGrid, Table, Info, RefreshCw, ShieldCheck, DoorOpen } from 'lucide-react';
+import { LayoutGrid, Table, Info, RefreshCw, ShieldCheck, DoorOpen, ArrowRightLeft } from 'lucide-react';
 
 const STORAGE_KEY = 'lapas_batang_kontrol_baju_v2';
 const BLOK_STORAGE_KEY = 'lapas_batang_daftar_blok_v2';
@@ -348,6 +349,71 @@ export default function App() {
   // Penukaran Pakaian Modal
   const [isTukarPakaianOpen, setIsTukarPakaianOpen] = useState(false);
   const [inmateForTukar, setInmateForTukar] = useState<Inmate | null>(null);
+
+  // Mutasi Kamar / Blok Modal State & Handlers
+  const [isMutasiOpen, setIsMutasiOpen] = useState(false);
+  const [inmateForMutasi, setInmateForMutasi] = useState<Inmate | null>(null);
+
+  const handleOpenMutasi = (inmate?: Inmate) => {
+    setInmateForMutasi(inmate || null);
+    setIsMutasiOpen(true);
+  };
+
+  const handleExecuteMutasi = (
+    inmateIds: string[],
+    targetBlok: string,
+    targetKamarNomor: string,
+    targetKamarFull: string,
+    alasan: string,
+    petugas: string,
+    catatan?: string
+  ) => {
+    const now = new Date();
+    const tanggalStr = now.toISOString().split('T')[0];
+    const jamStr = now.toTimeString().slice(0, 5);
+
+    setInmates((prevInmates) =>
+      prevInmates.map((inmate) => {
+        if (inmateIds.includes(inmate.id)) {
+          const mutasiRecord: MutasiKamarRecord = {
+            id: `mutasi-${Date.now()}-${inmate.id}`,
+            tanggal: tanggalStr,
+            jam: jamStr,
+            blokAsal: inmate.blok,
+            kamarAsal: inmate.kamarNomor,
+            blokTujuan: targetBlok,
+            kamarTujuan: targetKamarNomor,
+            alasan,
+            petugas,
+            catatan,
+          };
+
+          const kontrolRecord: KontrolRecord = {
+            id: `kontrol-mutasi-${Date.now()}-${inmate.id}`,
+            tanggal: tanggalStr,
+            petugas,
+            kategoriAksi: 'Mutasi Kamar / Blok',
+            jumlahSebelumnya: inmate.jumlahBaju ?? inmate.pakaianList?.reduce((acc, p) => acc + p.jumlah, 0) ?? 2,
+            jumlahSesudahnya: inmate.jumlahBaju ?? inmate.pakaianList?.reduce((acc, p) => acc + p.jumlah, 0) ?? 2,
+            kondisi: inmate.kondisiBaju || 'Layak Pakai',
+            catatan: `Mutasi kamar dari [${inmate.blok} - ${inmate.kamarNomor}] ke [${targetBlok} - ${targetKamarNomor}]. Alasan: ${alasan}.${catatan ? ` Catatan: ${catatan}` : ''}`,
+          };
+
+          return {
+            ...inmate,
+            blok: targetBlok,
+            kamarNomor: targetKamarNomor,
+            kamarHunian: targetKamarFull,
+            tanggalKontrolTerakhir: tanggalStr,
+            petugasPemeriksa: petugas,
+            riwayatMutasi: [mutasiRecord, ...(inmate.riwayatMutasi || [])],
+            riwayatKontrol: [kontrolRecord, ...(inmate.riwayatKontrol || [])],
+          };
+        }
+        return inmate;
+      })
+    );
+  };
 
   // Data Sync Modal
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -791,6 +857,7 @@ export default function App() {
         onOpenPrintModal={() => handleOpenPrintModal()}
         onOpenKelolaBlok={() => setIsKelolaBlokOpen(true)}
         onOpenDetailKamar={() => handleOpenDetailKamar()}
+        onOpenMutasi={() => handleOpenMutasi()}
         onResetData={handleResetData}
       />
 
@@ -904,7 +971,7 @@ export default function App() {
                     </strong>
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <button
                     type="button"
                     onClick={() => handleOpenDetailKamar(selectedBlok)}
@@ -913,6 +980,15 @@ export default function App() {
                   >
                     <DoorOpen className="w-3.5 h-3.5 text-amber-400" />
                     <span>Detail & Edit Kamar {selectedBlok}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenMutasi()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0a274c] hover:bg-[#0f3769] text-cyan-300 hover:text-white border border-cyan-500/40 font-bold transition text-xs shadow-xs"
+                    title="Mutasi Kamar / Blok"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Mutasi Kamar</span>
                   </button>
                   <button
                     onClick={() => setSelectedBlok('Semua Blok')}
@@ -942,6 +1018,7 @@ export default function App() {
                 }}
                 onDelete={handleDeleteInmate}
                 onOpenTukarPakaian={handleOpenTukarPakaian}
+                onOpenMutasi={(inmate) => handleOpenMutasi(inmate)}
                 onQuickAdjustClothing={handleQuickAdjustClothing}
               />
             ) : (
@@ -961,6 +1038,7 @@ export default function App() {
                 }}
                 onDelete={handleDeleteInmate}
                 onOpenTukarPakaian={handleOpenTukarPakaian}
+                onOpenMutasi={(inmate) => handleOpenMutasi(inmate)}
               />
             )}
 
@@ -1043,6 +1121,10 @@ export default function App() {
           setIsQuickControlOpen(true);
         }}
         onOpenTukarPakaian={handleOpenTukarPakaian}
+        onOpenMutasi={(inmate) => {
+          setIsDetailOpen(false);
+          handleOpenMutasi(inmate);
+        }}
       />
 
       <PrintReportModal
@@ -1094,6 +1176,20 @@ export default function App() {
         inmate={inmateToDelete}
         onClose={() => setInmateToDelete(null)}
         onConfirm={handleConfirmDeleteInmate}
+      />
+
+      {/* Mutasi Kamar / Blok Warga Binaan Modal */}
+      <MutasiKamarModal
+        isOpen={isMutasiOpen}
+        onClose={() => {
+          setIsMutasiOpen(false);
+          setInmateForMutasi(null);
+        }}
+        inmates={inmates}
+        daftarBlok={daftarBlok}
+        kamarDetails={kamarDetails}
+        initialInmate={inmateForMutasi}
+        onExecuteMutasi={handleExecuteMutasi}
       />
 
     </div>

@@ -12,7 +12,8 @@ export type ActionCategory =
   | 'Sidak Kamar' 
   | 'Penggantian Seragam Rusak' 
   | 'Penukaran Pakaian'
-  | 'Penyitaan Baju Berlebih';
+  | 'Penyitaan Baju Berlebih'
+  | 'Mutasi Kamar / Blok';
 
 export interface ClothingItem {
   id: string;
@@ -32,6 +33,19 @@ export interface PenukaranRecord {
   alasan: string; // e.g. "Sobek di lengan", "Usang/Kotor", "Salah Ukuran"
   kondisiLama: string; // "Rusak/Sobek" | "Usang" | "Kotor" | "Tidak Pas"
   itemPengganti: string; // e.g. "Baju Seragam Baru (Size L)"
+  petugas: string;
+  catatan?: string;
+}
+
+export interface MutasiKamarRecord {
+  id: string;
+  tanggal: string;
+  jam: string;
+  blokAsal: string;
+  kamarAsal: string;
+  blokTujuan: string;
+  kamarTujuan: string;
+  alasan: string;
   petugas: string;
   catatan?: string;
 }
@@ -108,6 +122,9 @@ export interface Inmate {
   
   // Riwayat Pemeriksaan Pakaian
   riwayatKontrol: KontrolRecord[];
+  
+  // Riwayat Mutasi Kamar / Blok
+  riwayatMutasi?: MutasiKamarRecord[];
 }
 
 export interface FilterOptions {

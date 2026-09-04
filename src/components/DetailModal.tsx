@@ -1,6 +1,6 @@
 import React from 'react';
 import { Inmate } from '../types';
-import { X, Printer, Shirt, RefreshCw, Calendar, History, CheckCircle2, AlertTriangle, User } from 'lucide-react';
+import { X, Printer, Shirt, RefreshCw, Calendar, History, CheckCircle2, AlertTriangle, User, ArrowRightLeft } from 'lucide-react';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface DetailModalProps {
   inmate: Inmate | null;
   onOpenQuickControl: (inmate: Inmate) => void;
   onOpenTukarPakaian?: (inmate: Inmate) => void;
+  onOpenMutasi?: (inmate: Inmate) => void;
 }
 
 export const DetailModal: React.FC<DetailModalProps> = ({
@@ -16,6 +17,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({
   inmate,
   onOpenQuickControl,
   onOpenTukarPakaian,
+  onOpenMutasi,
 }) => {
   if (!isOpen || !inmate) return null;
 
@@ -26,6 +28,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({
   const pakaianList = inmate.pakaianList || [];
   const riwayatPenukaran = inmate.riwayatPenukaran || [];
   const riwayatKontrol = inmate.riwayatKontrol || [];
+  const riwayatMutasi = inmate.riwayatMutasi || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
@@ -43,6 +46,19 @@ export const DetailModal: React.FC<DetailModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {onOpenMutasi && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenMutasi(inmate);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-[#092242] hover:bg-[#0d2a52] text-cyan-300 hover:text-white border border-cyan-500/40 transition shadow-xs"
+                title="Mutasi Kamar / Blok"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                Mutasi Kamar
+              </button>
+            )}
             {onOpenTukarPakaian && (
               <button
                 onClick={() => {
@@ -262,6 +278,50 @@ export const DetailModal: React.FC<DetailModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* RIWAYAT MUTASI KAMAR / BLOK */}
+          {riwayatMutasi.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h4 className="text-sm font-bold text-white print:text-slate-900 flex items-center gap-2 font-condensed uppercase tracking-wider">
+                  <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+                  Riwayat Mutasi Kamar & Penempatan Hunian
+                </h4>
+                <span className="text-xs text-slate-400 print:text-slate-500">
+                  {riwayatMutasi.length} Mutasi
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {riwayatMutasi.map((m) => (
+                  <div
+                    key={m.id}
+                    className="p-3 rounded-xl border border-[#144963] bg-[#061824] text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                          {m.blokAsal} - {m.kamarAsal} ➔ {m.blokTujuan} - {m.kamarTujuan}
+                        </span>
+                      </div>
+                      <span className="text-slate-400 text-[11px] font-mono">
+                        {m.tanggal} {m.jam ? `• ${m.jam} WIB` : ''}
+                      </span>
+                    </div>
+
+                    <div className="text-slate-300">
+                      Alasan: <strong className="text-white">{m.alasan}</strong>
+                      {m.catatan && <span className="text-slate-400 italic block mt-0.5">Catatan: {m.catatan}</span>}
+                    </div>
+
+                    <div className="text-[11px] text-slate-400 pt-1 border-t border-[#12415c]/60 flex justify-between">
+                      <span>Petugas Pemutasian: <strong className="text-slate-200">{m.petugas}</strong></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* RIWAYAT PEMERIKSAAN & KONTROL FISIK */}
           <div>

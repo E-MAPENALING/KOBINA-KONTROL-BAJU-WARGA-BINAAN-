@@ -11,7 +11,8 @@ import {
   Trash2, 
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface InmateCardViewProps {
@@ -21,6 +22,7 @@ interface InmateCardViewProps {
   onOpenEdit: (inmate: Inmate) => void;
   onDelete: (id: string, nama: string) => void;
   onOpenTukarPakaian: (inmate: Inmate) => void;
+  onOpenMutasi?: (inmate: Inmate) => void;
 }
 
 export const InmateCardView: React.FC<InmateCardViewProps> = ({
@@ -30,6 +32,7 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
   onOpenEdit,
   onDelete,
   onOpenTukarPakaian,
+  onOpenMutasi,
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(24);
@@ -180,6 +183,16 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
                   </button>
+
+                  {onOpenMutasi && (
+                    <button
+                      onClick={() => onOpenMutasi(inmate)}
+                      className="p-1.5 rounded-lg bg-[#07182e] hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 hover:border-cyan-400 transition shadow-2xs"
+                      title="Mutasi Kamar / Blok Warga Binaan"
+                    >
+                      <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-300" />
+                    </button>
+                  )}
 
                   <button
                     onClick={() => onOpenDetail(inmate)}

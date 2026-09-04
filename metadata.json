@@ -1,0 +1,6 @@
+{
+  "name": "KOBINA - Kontrol Baju Warga Binaan",
+  "description": "KOBINA (Kontrol Baju Warga Binaan) - Aplikasi pengawasan dan inventarisasi kontrol pakaian tahanan & narapidana per blok hunian Lapas/Rutan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord, KamarDetail, MutasiKamarRecord, KontrolRecord } from './types';
+import { Inmate, FilterOptions, ActionCategory, ClothingCondition, BlokHunian, PenukaranRecord, KamarDetail, MutasiKamarRecord, KontrolRecord, DataBebas } from './types';
 import { INITIAL_INMATES, DEFAULT_BLOK_LIST, DAFTAR_KAMAR, DAFTAR_JENIS_KEJAHATAN } from './data/initialInmates';
 import { Header } from './components/Header';
 import { BlokSidebar } from './components/BlokSidebar';
@@ -19,6 +19,7 @@ import { DataSyncModal } from './components/DataSyncModal';
 import { DetailKamarBlokModal } from './components/DetailKamarBlokModal';
 import { DeleteInmateModal } from './components/DeleteInmateModal';
 import { MutasiKamarModal } from './components/MutasiKamarModal';
+import { NonaktifkanBebasModal } from './components/NonaktifkanBebasModal';
 import {
   getSpecificRoomsForBlok,
   getAllRoomsGroupedByBlok,
@@ -177,6 +178,7 @@ export default function App() {
     kamarHunian: 'Semua Kamar',
     jenisKejahatan: 'Semua Kejahatan',
     statusTahanan: 'All',
+    statusKeaktifan: 'Aktif',
     kondisiBaju: 'All',
     statusDistribusi: 'All',
     hanyaBajuBermasalah: false,
@@ -297,13 +299,29 @@ export default function App() {
         if (!isOver && !isKurang && !isRusak && !hasSitaan) return false;
       }
 
+      // 8. Status Keaktifan (Aktif vs Bebas)
+      const statusKeaktifanFilter = filters.statusKeaktifan || 'Aktif';
+      if (statusKeaktifanFilter !== 'All') {
+        const isBebas = inmate.statusKeaktifan === 'Bebas';
+        if (statusKeaktifanFilter === 'Aktif' && isBebas) return false;
+        if (statusKeaktifanFilter === 'Bebas' && !isBebas) return false;
+      }
+
       return true;
     });
   }, [inmates, filters, selectedBlok]);
 
+  // Total Inmates yang Berstatus Bebas
+  const totalBebas = useMemo(() => {
+    return inmates.filter((i) => i.statusKeaktifan === 'Bebas').length;
+  }, [inmates]);
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [inmateToEdit, setInmateToEdit] = useState<Inmate | null>(null);
+
+  const [isNonaktifkanBebasOpen, setIsNonaktifkanBebasOpen] = useState(false);
+  const [inmateForNonaktifkanBebas, setInmateForNonaktifkanBebas] = useState<Inmate | null>(null);
 
   const [isQuickControlOpen, setIsQuickControlOpen] = useState(false);
   const [inmateForQuickControl, setInmateForQuickControl] = useState<Inmate | null>(null);
@@ -315,6 +333,8 @@ export default function App() {
 
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printTargetKamar, setPrintTargetKamar] = useState<string | undefined>(undefined);
+  const [printDocumentType, setPrintDocumentType] = useState<'rekapitulasi' | 'kartu_kendali'>('rekapitulasi');
+  const [printTargetInmateId, setPrintTargetInmateId] = useState<string | undefined>(undefined);
   const [isKelolaBlokOpen, setIsKelolaBlokOpen] = useState(false);
 
   // Detail Kamar per Blok Modal State
@@ -335,7 +355,11 @@ export default function App() {
   // Inmate Delete Confirmation Modal State (replaces window.confirm)
   const [inmateToDelete, setInmateToDelete] = useState<Inmate | null>(null);
 
-  const handleOpenPrintModal = (kamarName?: string) => {
+  const handleOpenPrintModal = (
+    kamarName?: string, 
+    docType: 'rekapitulasi' | 'kartu_kendali' = 'rekapitulasi', 
+    inmateId?: string
+  ) => {
     if (kamarName) {
       setPrintTargetKamar(kamarName);
     } else if (filters.kamarHunian && filters.kamarHunian !== 'Semua Kamar') {
@@ -343,7 +367,18 @@ export default function App() {
     } else {
       setPrintTargetKamar(undefined);
     }
+    setPrintDocumentType(docType);
+    setPrintTargetInmateId(inmateId);
     setIsPrintModalOpen(true);
+  };
+
+  const handleOpenCetakKartu = (inmate?: Inmate) => {
+    const target = inmate || inmateForDetail || inmates[0];
+    if (target) {
+      handleOpenPrintModal(target.kamarHunian, 'kartu_kendali', target.id);
+    } else {
+      handleOpenPrintModal(undefined, 'kartu_kendali');
+    }
   };
 
   // Penukaran Pakaian Modal
@@ -605,11 +640,105 @@ export default function App() {
       kamarHunian: 'Semua Kamar',
       jenisKejahatan: 'Semua Kejahatan',
       statusTahanan: 'All',
+      statusKeaktifan: 'Aktif',
       kondisiBaju: 'All',
       statusDistribusi: 'All',
       hanyaBajuBermasalah: false,
     });
     setSelectedBlok('Semua Blok');
+  };
+
+  // Handlers for Penonaktifan Warga Binaan Bebas
+  const handleOpenNonaktifkanBebas = (inmate?: Inmate) => {
+    setInmateForNonaktifkanBebas(inmate || null);
+    setIsNonaktifkanBebasOpen(true);
+  };
+
+  const handleCloseNonaktifkanBebas = () => {
+    setIsNonaktifkanBebasOpen(false);
+    setInmateForNonaktifkanBebas(null);
+  };
+
+  const handleNonaktifkanInmate = (inmateId: string, dataBebas: DataBebas, nolkanPakaian: boolean) => {
+    setInmates((prev) =>
+      prev.map((item) => {
+        if (item.id !== inmateId) return item;
+
+        const updatedPakaianList = nolkanPakaian
+          ? (item.pakaianList || []).map((p) => ({ ...p, jumlah: 0 }))
+          : item.pakaianList;
+
+        const currentTotal = (item.pakaianList || []).reduce((acc, p) => acc + p.jumlah, 0);
+
+        const newKontrolRecord: KontrolRecord = {
+          id: `ctrl-bebas-${Date.now()}`,
+          tanggal: dataBebas.tanggalBebas,
+          petugas: dataBebas.petugasPembebas,
+          kategoriAksi: 'Penggantian Seragam Rusak',
+          jumlahSebelumnya: currentTotal,
+          jumlahSesudahnya: nolkanPakaian ? 0 : currentTotal,
+          kondisi: 'Layak Pakai',
+          catatan: `Penonaktifan WBP (Sudah Bebas - ${dataBebas.jenisPembebasan}). No SK: ${dataBebas.nomorSuratBebas || '-'}. Status Sandang: ${dataBebas.statusPengembalianSeragam}. ${dataBebas.keterangan || ''}`,
+        };
+
+        return {
+          ...item,
+          statusKeaktifan: 'Bebas',
+          dataBebas,
+          pakaianList: updatedPakaianList,
+          statusDistribusi: nolkanPakaian ? 'Belum Diberikan' : item.statusDistribusi,
+          riwayatKontrol: [newKontrolRecord, ...(item.riwayatKontrol || [])],
+        };
+      })
+    );
+
+    if (inmateForDetail && inmateForDetail.id === inmateId) {
+      setInmateForDetail((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          statusKeaktifan: 'Bebas',
+          dataBebas,
+        };
+      });
+    }
+  };
+
+  const handleAktifkanKembaliInmate = (inmateId: string) => {
+    setInmates((prev) =>
+      prev.map((item) => {
+        if (item.id !== inmateId) return item;
+
+        const reactivateKontrol: KontrolRecord = {
+          id: `ctrl-reactivate-${Date.now()}`,
+          tanggal: new Date().toISOString().split('T')[0],
+          petugas: 'PETUGAS PENGAWAS SANDANG',
+          kategoriAksi: 'Distribusi Jatah',
+          jumlahSebelumnya: 0,
+          jumlahSesudahnya: (item.pakaianList || []).reduce((acc, p) => acc + p.jumlah, 0),
+          kondisi: 'Layak Pakai',
+          catatan: 'Reaktivasi / Pemulihan Status Warga Binaan Aktif kembali ke Kamar Hunian.',
+        };
+
+        return {
+          ...item,
+          statusKeaktifan: 'Aktif',
+          dataBebas: undefined,
+          riwayatKontrol: [reactivateKontrol, ...(item.riwayatKontrol || [])],
+        };
+      })
+    );
+
+    if (inmateForDetail && inmateForDetail.id === inmateId) {
+      setInmateForDetail((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          statusKeaktifan: 'Aktif',
+          dataBebas: undefined,
+        };
+      });
+    }
   };
 
   const handleFilterAlerts = () => {
@@ -849,20 +978,23 @@ export default function App() {
       {/* Header */}
       <Header
         totalInmates={inmates.length}
+        totalBebas={totalBebas}
         onOpenAddModal={() => {
           setInmateToEdit(null);
           setIsAddModalOpen(true);
         }}
         onOpenKamarInspect={() => setIsKamarInspectOpen(true)}
-        onOpenPrintModal={() => handleOpenPrintModal()}
+        onOpenPrintModal={() => handleOpenPrintModal(undefined, 'rekapitulasi')}
+        onOpenCetakKartu={() => handleOpenCetakKartu()}
         onOpenKelolaBlok={() => setIsKelolaBlokOpen(true)}
         onOpenDetailKamar={() => handleOpenDetailKamar()}
         onOpenMutasi={() => handleOpenMutasi()}
+        onOpenNonaktifkanBebas={() => handleOpenNonaktifkanBebas()}
         onResetData={handleResetData}
       />
 
       {/* Main Content Area: Two-Column Layout matching the image */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 space-y-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 space-y-6 ${isDetailOpen || isPrintModalOpen ? 'print:hidden' : ''}`}>
         
         {/* Statistics Cards */}
         <StatSummary
@@ -1019,7 +1151,10 @@ export default function App() {
                 onDelete={handleDeleteInmate}
                 onOpenTukarPakaian={handleOpenTukarPakaian}
                 onOpenMutasi={(inmate) => handleOpenMutasi(inmate)}
+                onOpenCetakKartu={handleOpenCetakKartu}
                 onQuickAdjustClothing={handleQuickAdjustClothing}
+                onOpenNonaktifkanBebas={(inmate) => handleOpenNonaktifkanBebas(inmate)}
+                onAktifkanKembali={handleAktifkanKembaliInmate}
               />
             ) : (
               <InmateCardView
@@ -1039,6 +1174,9 @@ export default function App() {
                 onDelete={handleDeleteInmate}
                 onOpenTukarPakaian={handleOpenTukarPakaian}
                 onOpenMutasi={(inmate) => handleOpenMutasi(inmate)}
+                onOpenCetakKartu={handleOpenCetakKartu}
+                onOpenNonaktifkanBebas={(inmate) => handleOpenNonaktifkanBebas(inmate)}
+                onAktifkanKembali={handleAktifkanKembaliInmate}
               />
             )}
 
@@ -1116,6 +1254,8 @@ export default function App() {
           setInmateForDetail(null);
         }}
         inmate={inmateForDetail}
+        allInmates={inmates}
+        onSelectInmate={(target) => setInmateForDetail(target)}
         onOpenQuickControl={(inmate) => {
           setInmateForQuickControl(inmate);
           setIsQuickControlOpen(true);
@@ -1125,6 +1265,9 @@ export default function App() {
           setIsDetailOpen(false);
           handleOpenMutasi(inmate);
         }}
+        onOpenPrintCenter={(inmate) => handleOpenCetakKartu(inmate)}
+        onOpenNonaktifkanBebas={(inmate) => handleOpenNonaktifkanBebas(inmate)}
+        onAktifkanKembali={handleAktifkanKembaliInmate}
       />
 
       <PrintReportModal
@@ -1132,12 +1275,15 @@ export default function App() {
         onClose={() => {
           setIsPrintModalOpen(false);
           setPrintTargetKamar(undefined);
+          setPrintTargetInmateId(undefined);
         }}
         inmates={inmates}
         daftarBlok={daftarBlok}
         roomGroups={roomGroups}
         initialKamar={printTargetKamar || (filters.kamarHunian !== 'Semua Kamar' ? filters.kamarHunian : undefined)}
         initialBlok={selectedBlok !== 'Semua Blok' ? selectedBlok : undefined}
+        initialDocumentType={printDocumentType}
+        initialInmateId={printTargetInmateId}
       />
 
       {/* Data Sync Live & Dami Comparison Modal */}
@@ -1190,6 +1336,20 @@ export default function App() {
         kamarDetails={kamarDetails}
         initialInmate={inmateForMutasi}
         onExecuteMutasi={handleExecuteMutasi}
+      />
+
+      {/* Penonaktifan Warga Binaan Bebas Modal */}
+      <NonaktifkanBebasModal
+        isOpen={isNonaktifkanBebasOpen}
+        onClose={handleCloseNonaktifkanBebas}
+        inmates={inmates}
+        initialInmate={inmateForNonaktifkanBebas}
+        onNonaktifkanInmate={handleNonaktifkanInmate}
+        onAktifkanKembaliInmate={handleAktifkanKembaliInmate}
+        onOpenDetail={(inmate) => {
+          setInmateForDetail(inmate);
+          setIsDetailOpen(true);
+        }}
       />
 
     </div>

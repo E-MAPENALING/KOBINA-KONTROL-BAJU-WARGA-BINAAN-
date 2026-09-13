@@ -1,29 +1,35 @@
 import React from 'react';
-import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2, DoorOpen, ArrowRightLeft } from 'lucide-react';
+import { ShieldCheck, Plus, ClipboardCheck, Printer, RefreshCw, Shirt, Building2, DoorOpen, ArrowRightLeft, UserX } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
   onOpenKamarInspect: () => void;
   onOpenPrintModal: () => void;
+  onOpenCetakKartu?: () => void;
   onOpenKelolaBlok: () => void;
   onOpenDetailKamar?: () => void;
   onOpenMutasi?: () => void;
+  onOpenNonaktifkanBebas?: () => void;
   onResetData: () => void;
   totalInmates: number;
+  totalBebas?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenAddModal,
   onOpenKamarInspect,
   onOpenPrintModal,
+  onOpenCetakKartu,
   onOpenKelolaBlok,
   onOpenDetailKamar,
   onOpenMutasi,
+  onOpenNonaktifkanBebas,
   onResetData,
   totalInmates,
+  totalBebas,
 }) => {
   return (
-    <header className="relative bg-[#081d39]/95 backdrop-blur-md border-b-2 border-amber-500/40 shadow-2xl overflow-hidden">
+    <header className="no-print relative bg-[#081d39]/95 backdrop-blur-md border-b-2 border-amber-500/40 shadow-2xl overflow-hidden">
       
       {/* Top Background Pattern & Subtle Gold / Royal Blue Glows */}
       <div className="absolute inset-0 pointer-events-none opacity-25 bg-[linear-gradient(to_right,#f59e0b18_1px,transparent_1px),linear-gradient(to_bottom,#3b82f618_1px,transparent_1px)] bg-[size:36px_36px]" />
@@ -96,6 +102,23 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
+            {onOpenNonaktifkanBebas && (
+              <button
+                id="btn-menu-nonaktifkan-bebas"
+                onClick={onOpenNonaktifkanBebas}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#241322] hover:bg-[#381c35] text-rose-300 hover:text-white border border-rose-500/50 hover:border-rose-400 transition shadow-sm"
+                title="Menu Penonaktifan Warga Binaan yang Sudah Bebas (Ekspirasi / PB / CB / CMB)"
+              >
+                <UserX className="w-4 h-4 text-rose-400" />
+                <span>WBP Bebas</span>
+                {typeof totalBebas === 'number' && totalBebas > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-rose-500/30 text-rose-200 text-[10px] font-mono border border-rose-500/50">
+                    {totalBebas}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               id="btn-inspeksi-kamar"
               onClick={onOpenKamarInspect}
@@ -110,11 +133,23 @@ export const Header: React.FC<HeaderProps> = ({
               id="btn-cetak-laporan"
               onClick={onOpenPrintModal}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#0b274e] hover:bg-[#10376d] text-amber-200 hover:text-white border border-amber-500/40 hover:border-amber-400 transition shadow-sm"
-              title="Cetak Berita Acara & Kartu Kontrol Sandang"
+              title="Cetak Berita Acara Rekapitulasi Sandang Kamar"
             >
               <Printer className="w-4 h-4 text-amber-300" />
               <span>Cetak Laporan</span>
             </button>
+
+            {onOpenCetakKartu && (
+              <button
+                id="btn-buka-cetak-kartu"
+                onClick={onOpenCetakKartu}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#092242] hover:bg-[#0e315d] text-cyan-200 hover:text-white border border-cyan-500/40 hover:border-cyan-400 transition shadow-sm"
+                title="Buka & Cetak Kartu Kendali Pakaian Warga Binaan"
+              >
+                <Shirt className="w-4 h-4 text-cyan-300" />
+                <span>Cetak Kartu</span>
+              </button>
+            )}
 
             <button
               id="btn-tambah-inmate"

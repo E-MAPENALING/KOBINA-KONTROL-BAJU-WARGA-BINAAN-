@@ -12,11 +12,14 @@ import {
   PlusCircle, 
   MinusCircle, 
   FileText,
+  Printer,
   RefreshCw,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  ArrowRightLeft
+  ArrowRightLeft,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 
 interface InmateTableProps {
@@ -27,6 +30,9 @@ interface InmateTableProps {
   onDelete: (id: string, nama: string) => void;
   onOpenTukarPakaian: (inmate: Inmate) => void;
   onOpenMutasi?: (inmate: Inmate) => void;
+  onOpenCetakKartu?: (inmate: Inmate) => void;
+  onOpenNonaktifkanBebas?: (inmate: Inmate) => void;
+  onAktifkanKembali?: (inmateId: string) => void;
   onQuickAdjustClothing: (inmateId: string, delta: number) => void;
   onQuickAdjustItem?: (inmateId: string, itemType: 'baju' | 'celana', delta: number) => void;
 }
@@ -39,6 +45,9 @@ export const InmateTable: React.FC<InmateTableProps> = ({
   onDelete,
   onOpenTukarPakaian,
   onOpenMutasi,
+  onOpenCetakKartu,
+  onOpenNonaktifkanBebas,
+  onAktifkanKembali,
   onQuickAdjustClothing,
   onQuickAdjustItem,
 }) => {
@@ -115,7 +124,7 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                 >
                   {/* Identitas & No Register */}
                   <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={`px-2 py-0.5 rounded-lg text-xs font-bold font-condensed tracking-wider shadow-2xs ${
                         inmate.status === 'Tahanan'
                           ? 'bg-amber-400/25 text-amber-300 border border-amber-400/60'
@@ -123,6 +132,11 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                       }`}>
                         {inmate.status}
                       </span>
+                      {inmate.statusKeaktifan === 'Bebas' && (
+                        <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold font-condensed tracking-wider bg-rose-500/25 text-rose-300 border border-rose-500/60 shadow-2xs">
+                          SUDAH BEBAS
+                        </span>
+                      )}
                       <span className="font-bold text-white text-base font-condensed tracking-wide">
                         {inmate.nama}
                       </span>
@@ -132,8 +146,15 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                         Alias: {inmate.alias}
                       </div>
                     )}
-                    <div className="text-xs font-mono text-amber-300/90 font-bold mt-1">
-                      {inmate.noRegister}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs font-mono text-amber-300/90 font-bold">
+                        {inmate.noRegister}
+                      </span>
+                      {inmate.statusKeaktifan === 'Bebas' && inmate.dataBebas && (
+                        <span className="text-[10px] text-rose-300 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-900/60 font-semibold">
+                          Tgl Bebas: {inmate.dataBebas.tanggalBebas} • {inmate.dataBebas.jenisPembebasan}
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -168,7 +189,7 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                         const itemOver = item.jumlah > item.maxJumlah;
                         return (
                           <div key={item.id} className="flex items-center justify-between text-xs bg-[#07182e]/80 px-2 py-1 rounded border border-blue-900/50">
-                            <span className="text-slate-300 truncate mr-2">{item.namaItem} ({item.ukuran}):</span>
+                            <span className="text-slate-300 truncate mr-2">{item.namaItem}:</span>
                             <div className="flex items-center gap-1 shrink-0 font-mono font-bold">
                               <span className={itemOver ? 'text-rose-400 font-black' : 'text-slate-100'}>
                                 {item.jumlah}
@@ -254,14 +275,44 @@ export const InmateTable: React.FC<InmateTableProps> = ({
                         </button>
                       )}
 
-                      {/* Tombol Detail / Cetak Kartu Kendali */}
+                      {/* Tombol Cetak Kartu Kendali Pakaian */}
                       <button
-                        onClick={() => onOpenDetail(inmate)}
-                        className="p-1.5 rounded-xl text-slate-200 hover:text-white bg-[#061527] hover:bg-[#0d2a52] border border-blue-800/60 hover:border-amber-400/60 transition shadow-2xs"
-                        title="Lihat Kartu Kendali & Riwayat Pertukaran"
+                        id={`btn-cetak-kartu-${inmate.id}`}
+                        onClick={() => {
+                          if (onOpenCetakKartu) {
+                            onOpenCetakKartu(inmate);
+                          } else {
+                            onOpenDetail(inmate);
+                          }
+                        }}
+                        className="p-1.5 rounded-xl text-amber-300 hover:text-white bg-[#061527] hover:bg-amber-950/50 border border-amber-500/50 hover:border-amber-400 transition shadow-2xs"
+                        title="Cetak Kartu Kendali Pakaian (A4)"
                       >
-                        <FileText className="w-4 h-4 text-blue-300" />
+                        <Printer className="w-4 h-4 text-amber-300" />
                       </button>
+
+                      {/* Tombol Nonaktifkan (Bebas) atau Aktifkan Kembali */}
+                      {inmate.statusKeaktifan === 'Bebas' ? (
+                        onAktifkanKembali && (
+                          <button
+                            onClick={() => onAktifkanKembali(inmate.id)}
+                            className="p-1.5 rounded-xl text-emerald-300 hover:text-white bg-[#061527] hover:bg-emerald-950/70 border border-emerald-500/50 hover:border-emerald-400 transition shadow-2xs"
+                            title="Aktifkan Kembali WBP ke Kamar Hunian"
+                          >
+                            <UserCheck className="w-4 h-4 text-emerald-400" />
+                          </button>
+                        )
+                      ) : (
+                        onOpenNonaktifkanBebas && (
+                          <button
+                            onClick={() => onOpenNonaktifkanBebas(inmate)}
+                            className="p-1.5 rounded-xl text-rose-300 hover:text-white bg-[#061527] hover:bg-rose-950/60 border border-rose-500/50 hover:border-rose-400 transition shadow-2xs"
+                            title="Nonaktifkan WBP yang Sudah Bebas (Ekspirasi / PB / CB)"
+                          >
+                            <UserX className="w-4 h-4 text-rose-400" />
+                          </button>
+                        )
+                      )}
 
                       {/* Tombol Edit */}
                       <button

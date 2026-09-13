@@ -12,11 +12,20 @@ interface InmateModalProps {
 }
 
 const DEFAULT_PRESET_ITEMS: Omit<ClothingItem, 'id'>[] = [
-  { namaItem: 'Baju Seragam', ukuran: 'L', jumlah: 2, maxJumlah: 2, keterangan: 'Atasan seragam resmi' },
-  { namaItem: 'Celana Seragam', ukuran: 'L', jumlah: 2, maxJumlah: 2, keterangan: 'Bawahan seragam resmi' },
-  { namaItem: 'Sarung', ukuran: 'Standar', jumlah: 1, maxJumlah: 1, keterangan: 'Perlengkapan ibadah' },
-  { namaItem: 'Handuk Mandi', ukuran: 'Standar', jumlah: 1, maxJumlah: 1, keterangan: 'Perlengkapan mandi' },
+  { namaItem: 'BAJU', jumlah: 2, maxJumlah: 2, keterangan: 'Atasan seragam dinas wajib' },
+  { namaItem: 'CELANA', jumlah: 2, maxJumlah: 2, keterangan: 'Bawahan seragam dinas resmi' },
+  { namaItem: 'HANDUK', jumlah: 1, maxJumlah: 1, keterangan: 'Perlengkapan sanitasi / mandi' },
+  { namaItem: 'SARUNG', jumlah: 1, maxJumlah: 1, keterangan: 'Perlengkapan ibadah' },
 ];
+
+const detectPilihanPakaian = (nama: string) => {
+  const norm = (nama || '').trim().toUpperCase();
+  if (norm === 'BAJU' || norm.includes('BAJU')) return 'BAJU';
+  if (norm === 'CELANA' || norm.includes('CELANA')) return 'CELANA';
+  if (norm === 'HANDUK' || norm.includes('HANDUK')) return 'HANDUK';
+  if (norm === 'SARUNG' || norm.includes('SARUNG')) return 'SARUNG';
+  return 'LAINNYA';
+};
 
 export const InmateModal: React.FC<InmateModalProps> = ({
   isOpen,
@@ -63,35 +72,31 @@ export const InmateModal: React.FC<InmateModalProps> = ({
         setPakaianList([
           {
             id: `p-${Date.now()}-1`,
-            namaItem: 'Baju Seragam',
-            ukuran: inmateToEdit.ukuranBaju || 'L',
+            namaItem: 'BAJU',
             jumlah: bajuCount,
             maxJumlah: maxBajuCount,
-            keterangan: 'Atasan seragam wajib',
+            keterangan: 'Atasan seragam dinas wajib',
           },
           {
             id: `p-${Date.now()}-2`,
-            namaItem: 'Celana Seragam',
-            ukuran: inmateToEdit.ukuranCelana || inmateToEdit.ukuranBaju || 'L',
+            namaItem: 'CELANA',
             jumlah: celanaCount,
             maxJumlah: maxCelanaCount,
-            keterangan: 'Bawahan seragam resmi',
+            keterangan: 'Bawahan seragam dinas resmi',
           },
           {
             id: `p-${Date.now()}-3`,
-            namaItem: 'Sarung',
-            ukuran: 'Standar',
+            namaItem: 'HANDUK',
             jumlah: 1,
             maxJumlah: 1,
-            keterangan: 'Perlengkapan ibadah',
+            keterangan: 'Perlengkapan sanitasi / mandi',
           },
           {
             id: `p-${Date.now()}-4`,
-            namaItem: 'Handuk Mandi',
-            ukuran: 'Standar',
+            namaItem: 'SARUNG',
             jumlah: 1,
             maxJumlah: 1,
-            keterangan: 'Peralatan sanitasi diri',
+            keterangan: 'Perlengkapan ibadah',
           },
         ]);
       }
@@ -108,7 +113,7 @@ export const InmateModal: React.FC<InmateModalProps> = ({
       setKamarNomor('Kamar 01');
       setJenisKejahatan('');
       
-      // Default initial clothing items
+      // Default initial clothing items (1. BAJU, 2. CELANA, 3. HANDUK, 4. SARUNG)
       setPakaianList(
         DEFAULT_PRESET_ITEMS.map((item, idx) => ({
           ...item,
@@ -124,15 +129,14 @@ export const InmateModal: React.FC<InmateModalProps> = ({
   if (!isOpen) return null;
 
   // Handler to add clothing item manually
-  const handleAddItem = (presetName = '', defaultUkuran = 'Standar') => {
+  const handleAddItem = (presetName = 'BAJU', defaultQty = 1, defaultMax = 1) => {
     setPakaianList((prev) => [
       ...prev,
       {
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        namaItem: presetName || 'Item Pakaian Baru',
-        ukuran: defaultUkuran,
-        jumlah: 1,
-        maxJumlah: 1,
+        namaItem: presetName,
+        jumlah: defaultQty,
+        maxJumlah: defaultMax,
         keterangan: '',
       },
     ]);
@@ -439,54 +443,40 @@ export const InmateModal: React.FC<InmateModalProps> = ({
                   Data Pakaian (Input Manual)
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Input jenis pakaian tahanan/narapidana (Baju, Celana, Sarung, Handuk, dll) beserta batas maksimal kepemilikan.
+                  Pilihan sandang tahanan/narapidana (1. BAJU, 2. CELANA, 3. HANDUK, 4. SARUNG) beserta batas maksimal kepemilikan.
                 </p>
               </div>
 
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-slate-500 font-medium">Tambah Cepat:</span>
+                <span className="text-[11px] text-slate-500 font-medium">Pilihan Cepat:</span>
                 <button
                   type="button"
-                  onClick={() => handleAddItem('Baju Seragam', 'L')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
+                  onClick={() => handleAddItem('BAJU', 2, 2)}
+                  className="px-2.5 py-1 text-xs font-bold rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 transition border border-blue-200"
                 >
-                  + Baju
+                  + 1. BAJU
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem('Celana Seragam', 'L')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
+                  onClick={() => handleAddItem('CELANA', 2, 2)}
+                  className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition border border-indigo-200"
                 >
-                  + Celana
+                  + 2. CELANA
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem('Sarung', 'Standar')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition"
+                  onClick={() => handleAddItem('HANDUK', 1, 1)}
+                  className="px-2.5 py-1 text-xs font-bold rounded-lg bg-cyan-100 text-cyan-800 hover:bg-cyan-200 transition border border-cyan-200"
                 >
-                  + Sarung
+                  + 3. HANDUK
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddItem('Handuk Mandi', 'Standar')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-cyan-100 text-cyan-700 hover:bg-cyan-200 transition"
+                  onClick={() => handleAddItem('SARUNG', 1, 1)}
+                  className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition border border-emerald-200"
                 >
-                  + Handuk
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddItem('Kaos Dalam', 'L')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-amber-100 text-amber-800 hover:bg-amber-200 transition"
-                >
-                  + Kaos Dalam
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddItem('Peci / Kopiah', 'Standar')}
-                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-purple-100 text-purple-700 hover:bg-purple-200 transition"
-                >
-                  + Peci
+                  + 4. SARUNG
                 </button>
               </div>
             </div>
@@ -495,6 +485,7 @@ export const InmateModal: React.FC<InmateModalProps> = ({
             <div className="space-y-2.5">
               {pakaianList.map((item, index) => {
                 const isItemOver = item.jumlah > item.maxJumlah;
+                const currentChoice = detectPilihanPakaian(item.namaItem);
 
                 return (
                   <div
@@ -504,39 +495,50 @@ export const InmateModal: React.FC<InmateModalProps> = ({
                     }`}
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                      {/* Nama Pakaian */}
-                      <div className="sm:col-span-4">
+                      {/* Pilihan Jenis Pakaian (1. BAJU, 2. CELANA, 3. HANDUK, 4. SARUNG) */}
+                      <div className="sm:col-span-5">
                         <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                          Nama Pakaian #{index + 1}
+                          Pilihan Pakaian #{index + 1}
                         </label>
-                        <input
-                          type="text"
-                          value={item.namaItem}
-                          onChange={(e) => handleUpdateItem(item.id, 'namaItem', e.target.value)}
-                          placeholder="Misal: Baju Seragam / Sarung / Handuk"
-                          required
-                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      {/* Ukuran */}
-                      <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                          Ukuran
-                        </label>
-                        <input
-                          type="text"
-                          value={item.ukuran || ''}
-                          onChange={(e) => handleUpdateItem(item.id, 'ukuran', e.target.value)}
-                          placeholder="S/M/L/XL/-"
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-semibold text-center text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        <select
+                          value={currentChoice}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'LAINNYA') {
+                              handleUpdateItem(item.id, 'namaItem', '');
+                            } else {
+                              handleUpdateItem(item.id, 'namaItem', val);
+                              if (val === 'BAJU' || val === 'CELANA') {
+                                if (item.maxJumlah === 1) handleUpdateItem(item.id, 'maxJumlah', 2);
+                              } else {
+                                if (item.maxJumlah > 2) handleUpdateItem(item.id, 'maxJumlah', 1);
+                              }
+                            }
+                          }}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="BAJU">1. BAJU</option>
+                          <option value="CELANA">2. CELANA</option>
+                          <option value="HANDUK">3. HANDUK</option>
+                          <option value="SARUNG">4. SARUNG</option>
+                          <option value="LAINNYA">Lainnya (Ketik Manual)...</option>
+                        </select>
+                        {currentChoice === 'LAINNYA' && (
+                          <input
+                            type="text"
+                            value={item.namaItem}
+                            onChange={(e) => handleUpdateItem(item.id, 'namaItem', e.target.value)}
+                            placeholder="Ketik nama pakaian (misal: Peci, Kaos Dalam)..."
+                            required
+                            className="w-full mt-1.5 px-2.5 py-1 bg-white border border-slate-300 rounded-md text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        )}
                       </div>
 
                       {/* Jumlah Saat Ini */}
                       <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-0.5 flex items-center justify-between">
-                          <span>Dimiliki</span>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                          Dimiliki
                         </label>
                         <input
                           type="number"
@@ -545,7 +547,7 @@ export const InmateModal: React.FC<InmateModalProps> = ({
                           value={item.jumlah}
                           onChange={(e) => handleUpdateItem(item.id, 'jumlah', parseInt(e.target.value) || 0)}
                           required
-                          className={`w-full px-2 py-1.5 border rounded text-xs font-black text-center focus:outline-none ${
+                          className={`w-full px-2 py-1.5 border rounded-lg text-xs font-black text-center focus:outline-none ${
                             isItemOver ? 'bg-rose-50 border-rose-400 text-rose-700' : 'bg-slate-50 border-slate-300 text-slate-900'
                           }`}
                         />
@@ -563,33 +565,33 @@ export const InmateModal: React.FC<InmateModalProps> = ({
                           value={item.maxJumlah}
                           onChange={(e) => handleUpdateItem(item.id, 'maxJumlah', parseInt(e.target.value) || 1)}
                           required
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-black text-center text-slate-900 focus:outline-none"
+                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-center text-slate-900 focus:outline-none"
                         />
                       </div>
 
                       {/* Status / Aksi Hapus */}
-                      <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-4 sm:pt-0">
+                      <div className="sm:col-span-3 flex items-center justify-end gap-2 pt-2 sm:pt-4">
                         {isItemOver ? (
-                          <span className="text-[10px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">
                             ⚠️ Over ({item.jumlah}/{item.maxJumlah})
                           </span>
                         ) : item.jumlah === item.maxJumlah ? (
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                             ✓ Maksimal
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-500">
-                            {item.jumlah}/{item.maxJumlah}
+                          <span className="text-[10px] text-slate-500 font-medium font-mono">
+                            {item.jumlah}/{item.maxJumlah} pcs
                           </span>
                         )}
 
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(item.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                           title="Hapus baris pakaian"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -602,11 +604,11 @@ export const InmateModal: React.FC<InmateModalProps> = ({
             <div className="flex items-center justify-between pt-1">
               <button
                 type="button"
-                onClick={() => handleAddItem('Item Pakaian Baru', 'Standar')}
+                onClick={() => handleAddItem('BAJU', 1, 1)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Tambah Baris Pakaian Manual
+                Tambah Baris Pakaian
               </button>
 
               <span className="text-[11px] text-slate-500 font-medium">

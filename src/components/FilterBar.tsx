@@ -11,6 +11,8 @@ interface FilterBarProps {
   daftarKejahatan: string[];
   totalResults: number;
   totalData: number;
+  totalAktif?: number;
+  totalBebas?: number;
   selectedBlok?: string;
   roomGroups?: RoomGroup[];
   onOpenPrintModal?: (kamar?: string) => void;
@@ -24,6 +26,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   daftarKejahatan,
   totalResults,
   totalData,
+  totalAktif,
+  totalBebas,
   selectedBlok = 'Semua Blok',
   roomGroups = [],
   onOpenPrintModal,
@@ -35,6 +39,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.statusTahanan !== 'All' ||
     filters.kondisiBaju !== 'All' ||
     filters.statusDistribusi !== 'All' ||
+    filters.statusKeaktifan !== 'Aktif' ||
     filters.hanyaBajuBermasalah;
 
   return (
@@ -177,6 +182,49 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span className="text-slate-300 font-bold flex items-center gap-1">
             <Filter className="w-3.5 h-3.5 text-amber-400" /> Status:
           </span>
+
+          {/* Filter Status Keaktifan (WBP Aktif vs Bebas / Nonaktif) */}
+          <div className="inline-flex rounded-xl p-0.5 bg-[#061527] border border-blue-800/60 shadow-xs">
+            <button
+              onClick={() => onFilterChange({ ...filters, statusKeaktifan: 'Aktif' })}
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 text-xs ${
+                (filters.statusKeaktifan || 'Aktif') === 'Aktif'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              title="Tampilkan Warga Binaan yang Masih Aktif di Kamar Hunian"
+            >
+              <span>Aktif</span>
+              {typeof totalAktif === 'number' && (
+                <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-black/20">({totalAktif})</span>
+              )}
+            </button>
+            <button
+              onClick={() => onFilterChange({ ...filters, statusKeaktifan: 'Bebas' })}
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 text-xs ${
+                filters.statusKeaktifan === 'Bebas'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-rose-300 hover:text-rose-100'
+              }`}
+              title="Tampilkan Warga Binaan yang Sudah Bebas (Arsip Nonaktif)"
+            >
+              <span>Sudah Bebas</span>
+              {typeof totalBebas === 'number' && (
+                <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-rose-950/60 text-rose-200">({totalBebas})</span>
+              )}
+            </button>
+            <button
+              onClick={() => onFilterChange({ ...filters, statusKeaktifan: 'All' })}
+              className={`px-2 py-1 rounded-lg font-bold transition text-xs ${
+                filters.statusKeaktifan === 'All'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Tampilkan Seluruh Arsip (Aktif & Bebas)"
+            >
+              Semua
+            </button>
+          </div>
 
           {/* Filter Status Tahanan vs WBP */}
           <div className="inline-flex rounded-xl p-0.5 bg-[#061527] border border-blue-800/60">

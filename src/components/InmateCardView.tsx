@@ -7,12 +7,15 @@ import {
   ShieldAlert, 
   Clock, 
   FileText, 
+  Printer,
   Edit3, 
   Trash2, 
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  ArrowRightLeft
+  ArrowRightLeft,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 
 interface InmateCardViewProps {
@@ -23,6 +26,9 @@ interface InmateCardViewProps {
   onDelete: (id: string, nama: string) => void;
   onOpenTukarPakaian: (inmate: Inmate) => void;
   onOpenMutasi?: (inmate: Inmate) => void;
+  onOpenCetakKartu?: (inmate: Inmate) => void;
+  onOpenNonaktifkanBebas?: (inmate: Inmate) => void;
+  onAktifkanKembali?: (inmateId: string) => void;
 }
 
 export const InmateCardView: React.FC<InmateCardViewProps> = ({
@@ -33,6 +39,9 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
   onDelete,
   onOpenTukarPakaian,
   onOpenMutasi,
+  onOpenCetakKartu,
+  onOpenNonaktifkanBebas,
+  onAktifkanKembali,
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(24);
@@ -75,13 +84,20 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
               <div>
                 {/* Header card: Status & Room */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold font-condensed tracking-wider shadow-2xs ${
-                    inmate.status === 'Tahanan'
-                      ? 'bg-amber-400/25 text-amber-300 border border-amber-400/60'
-                      : 'bg-white text-blue-950 font-black border border-blue-300'
-                  }`}>
-                    {inmate.status}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold font-condensed tracking-wider shadow-2xs ${
+                      inmate.status === 'Tahanan'
+                        ? 'bg-amber-400/25 text-amber-300 border border-amber-400/60'
+                        : 'bg-white text-blue-950 font-black border border-blue-300'
+                    }`}>
+                      {inmate.status}
+                    </span>
+                    {inmate.statusKeaktifan === 'Bebas' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold font-condensed tracking-wider bg-rose-500/25 text-rose-300 border border-rose-500/60 shadow-2xs">
+                        BEBAS
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1">
                     <span className="text-xs font-bold text-amber-300 bg-[#07182e] px-2.5 py-0.5 rounded-lg border border-blue-800/60 font-condensed tracking-wider">
                       {inmate.kamarHunian}
@@ -128,7 +144,7 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
                       <div key={p.id} className="flex justify-between items-center text-xs">
                         <span className="text-slate-300 truncate mr-2">{p.namaItem}:</span>
                         <span className={`font-mono font-bold ${over ? 'text-rose-400 font-black' : 'text-slate-100'}`}>
-                          {p.jumlah}/{p.maxJumlah} {p.ukuran && `(${p.ukuran})`}
+                          {p.jumlah}/{p.maxJumlah}
                         </span>
                       </div>
                     );
@@ -195,12 +211,42 @@ export const InmateCardView: React.FC<InmateCardViewProps> = ({
                   )}
 
                   <button
-                    onClick={() => onOpenDetail(inmate)}
-                    className="p-1.5 rounded-lg bg-[#07182e] hover:bg-[#0d2a52] text-slate-200 border border-blue-800/60 transition shadow-2xs"
-                    title="Detail & Kartu Kendali"
+                    id={`btn-card-cetak-kartu-${inmate.id}`}
+                    onClick={() => {
+                      if (onOpenCetakKartu) {
+                        onOpenCetakKartu(inmate);
+                      } else {
+                        onOpenDetail(inmate);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg bg-[#07182e] hover:bg-amber-950/50 text-amber-300 border border-amber-500/50 hover:border-amber-400 transition shadow-2xs"
+                    title="Cetak Kartu Kendali Pakaian (A4)"
                   >
-                    <FileText className="w-3.5 h-3.5 text-blue-300" />
+                    <Printer className="w-3.5 h-3.5 text-amber-300" />
                   </button>
+
+                  {/* Tombol Nonaktifkan (Bebas) atau Aktifkan Kembali */}
+                  {inmate.statusKeaktifan === 'Bebas' ? (
+                    onAktifkanKembali && (
+                      <button
+                        onClick={() => onAktifkanKembali(inmate.id)}
+                        className="p-1.5 rounded-lg bg-[#07182e] hover:bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 hover:border-emerald-400 transition shadow-2xs"
+                        title="Aktifkan Kembali WBP ke Kamar Hunian"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      </button>
+                    )
+                  ) : (
+                    onOpenNonaktifkanBebas && (
+                      <button
+                        onClick={() => onOpenNonaktifkanBebas(inmate)}
+                        className="p-1.5 rounded-lg bg-[#07182e] hover:bg-rose-950/60 text-rose-300 border border-rose-500/50 hover:border-rose-400 transition shadow-2xs"
+                        title="Nonaktifkan WBP yang Sudah Bebas"
+                      >
+                        <UserX className="w-3.5 h-3.5 text-rose-400" />
+                      </button>
+                    )
+                  )}
 
                   <button
                     onClick={() => onOpenEdit(inmate)}

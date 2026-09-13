@@ -8,11 +8,14 @@ interface StatSummaryProps {
 }
 
 export const StatSummary: React.FC<StatSummaryProps> = ({ inmates, onFilterAlerts }) => {
-  const total = inmates.length;
-  const tahananCount = inmates.filter((i) => i.status === 'Tahanan').length;
-  const wbpCount = inmates.filter((i) => i.status === 'Warga Binaan').length;
+  const activeInmates = inmates.filter((i) => i.statusKeaktifan !== 'Bebas');
+  const releasedCount = inmates.filter((i) => i.statusKeaktifan === 'Bebas').length;
 
-  const lengkapLayak = inmates.filter((i) => {
+  const total = activeInmates.length;
+  const tahananCount = activeInmates.filter((i) => i.status === 'Tahanan').length;
+  const wbpCount = activeInmates.filter((i) => i.status === 'Warga Binaan').length;
+
+  const lengkapLayak = activeInmates.filter((i) => {
     const isOver = i.pakaianList?.some((p) => p.jumlah > p.maxJumlah);
     const isKurang = i.pakaianList?.some((p) => p.jumlah < p.maxJumlah);
     const isRusak = i.kondisiBaju === 'Perlu Ganti' || i.kondisiBaju === 'Rusak/Sobek';
@@ -20,15 +23,15 @@ export const StatSummary: React.FC<StatSummaryProps> = ({ inmates, onFilterAlert
     return !isOver && !isKurang && !isRusak && !hasSitaan;
   }).length;
 
-  const butuhPergantian = inmates.filter((i) => {
+  const butuhPergantian = activeInmates.filter((i) => {
     const isOver = i.pakaianList?.some((p) => p.jumlah > p.maxJumlah);
     const isKurang = i.pakaianList?.some((p) => p.jumlah < p.maxJumlah);
     const isRusak = i.kondisiBaju === 'Perlu Ganti' || i.kondisiBaju === 'Rusak/Sobek';
     return isOver || isKurang || isRusak;
   }).length;
 
-  const totalSitaan = inmates.reduce((acc, curr) => acc + (curr.bajuTerlarangDisita || 0), 0);
-  const inmateWithSitaan = inmates.filter((i) => i.bajuTerlarangDisita > 0).length;
+  const totalSitaan = activeInmates.reduce((acc, curr) => acc + (curr.bajuTerlarangDisita || 0), 0);
+  const inmateWithSitaan = activeInmates.filter((i) => i.bajuTerlarangDisita > 0).length;
 
   const persentaseKepatuhan = total > 0 ? Math.round((lengkapLayak / total) * 100) : 0;
 
@@ -38,7 +41,7 @@ export const StatSummary: React.FC<StatSummaryProps> = ({ inmates, onFilterAlert
       <div className="relative bg-[#09203d]/95 backdrop-blur-md rounded-2xl border border-blue-900/60 border-t-3 border-t-amber-400 p-4 shadow-xl flex flex-col justify-between overflow-hidden group hover:border-amber-400/50 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-condensed">
-            TOTAL HUNIAN TERDATA
+            HUNIAN AKTIF TERDATA
           </span>
           <div className="w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/40 flex items-center justify-center text-amber-300">
             <Users className="w-4 h-4" />
@@ -48,13 +51,18 @@ export const StatSummary: React.FC<StatSummaryProps> = ({ inmates, onFilterAlert
           <div className="text-3xl font-black font-condensed tracking-wider text-white">
             {total} <span className="text-sm font-normal text-slate-300 font-sans">Jiwa</span>
           </div>
-          <div className="mt-2.5 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-white text-blue-950 font-bold border border-amber-300/60 shadow-xs">
+          <div className="mt-2.5 flex items-center gap-1.5 text-xs flex-wrap">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-white text-blue-950 font-bold border border-amber-300/60 shadow-xs">
               WBP: {wbpCount}
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-amber-400/20 text-amber-200 font-bold border border-amber-400/40">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-amber-400/20 text-amber-200 font-bold border border-amber-400/40">
               Tahanan: {tahananCount}
             </span>
+            {releasedCount > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40 font-mono text-[10px]" title="Warga Binaan yang sudah bebas (arsip nonaktif)">
+                {releasedCount} Bebas
+              </span>
+            )}
           </div>
         </div>
       </div>

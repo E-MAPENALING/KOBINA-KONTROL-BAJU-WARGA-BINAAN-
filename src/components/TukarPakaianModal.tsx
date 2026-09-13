@@ -159,9 +159,6 @@ export const TukarPakaianModal: React.FC<TukarPakaianModalProps> = ({
                       <span className="text-base font-black text-white font-mono">
                         {p.jumlah} <span className="text-xs font-normal text-slate-400 font-sans">/ max {p.maxJumlah}</span>
                       </span>
-                      {p.ukuran && (
-                        <span className="text-[10px] text-cyan-300 font-medium">{p.ukuran}</span>
-                      )}
                     </div>
                   </div>
                 );

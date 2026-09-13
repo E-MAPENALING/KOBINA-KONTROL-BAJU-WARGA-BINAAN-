@@ -1,5 +1,33 @@
 export type InmateCategory = 'Tahanan' | 'Warga Binaan';
 
+export type StatusKeaktifan = 'Aktif' | 'Bebas';
+
+export type JenisPembebasan = 
+  | 'Bebas Murni' 
+  | 'Pembebasan Bersyarat (PB)' 
+  | 'Cuti Bersyarat (CB)' 
+  | 'Cuti Menjelang Bebas (CMB)' 
+  | 'Asimilasi di Rumah' 
+  | 'Mutasi Keluar / Pindah Lapas' 
+  | 'Lainnya';
+
+export type StatusPengembalianSeragam = 
+  | 'Seragam Dikembalikan Lengkap'
+  | 'Sebagian Dikembalikan'
+  | 'Tidak Dikembalikan / Dihibahkan'
+  | 'Disimpan di Gudang Sandang';
+
+export interface DataBebas {
+  tanggalBebas: string; // YYYY-MM-DD
+  jamBebas?: string;
+  jenisPembebasan: JenisPembebasan;
+  nomorSuratBebas?: string; // No. SK Pembebasan / Ekspirasi
+  statusPengembalianSeragam: StatusPengembalianSeragam;
+  keterangan?: string;
+  petugasPembebas: string;
+  tanggalInput: string;
+}
+
 export type ClothingSize = 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL' | string;
 
 export type ClothingCondition = 'Layak Pakai' | 'Perlu Ganti' | 'Rusak/Sobek' | 'Dalam Pencucian';
@@ -125,6 +153,10 @@ export interface Inmate {
   
   // Riwayat Mutasi Kamar / Blok
   riwayatMutasi?: MutasiKamarRecord[];
+
+  // Status Keaktifan & Data Pembebasan
+  statusKeaktifan?: StatusKeaktifan; // 'Aktif' (default) | 'Bebas'
+  dataBebas?: DataBebas;
 }
 
 export interface FilterOptions {
@@ -135,4 +167,5 @@ export interface FilterOptions {
   kondisiBaju: string; // 'All' | 'Layak Pakai' | 'Perlu Ganti' | 'Rusak/Sobek' | 'Dalam Pencucian'
   statusDistribusi: string; // 'All' | 'Lengkap' | 'Kurang' | 'Belum Diberikan'
   hanyaBajuBermasalah: boolean; // Menampilkan yang kurang / rusak / berlebih
+  statusKeaktifan?: 'All' | 'Aktif' | 'Bebas'; // Filter status keaktifan WBP
 }
